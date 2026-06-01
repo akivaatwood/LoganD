@@ -1,7 +1,7 @@
 #include <pebble.h>
-// GH2
+// GH test
 
-static const int16_t s_emblem_y_offset = 2;
+static const int16_t s_emblem_y_offset = 1;
 static char s_temperature_text[8] = "--°";
 
 static Window *s_main_window;
