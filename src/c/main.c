@@ -1,5 +1,5 @@
 #include <pebble.h>
-// GH
+// GH2
 
 static const int16_t s_emblem_y_offset = 2;
 static char s_temperature_text[8] = "--°";
