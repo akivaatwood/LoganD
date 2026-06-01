@@ -1,0 +1,45 @@
+{
+    "author": "Akiva",
+    "dependencies": {},
+    "keywords": [
+        "pebble-app"
+    ],
+    "name": "logan",
+    "pebble": {
+        "displayName": "Logan Watchface",
+        "enableMultiJS": true,
+        "messageKeys": [],
+        "projectType": "native",
+        "resources": {
+            "media": [
+                {
+                    "file": "images/center-emblem.png",
+                    "name": "CENTER_EMBLEM",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem2.png",
+                    "name": "CENTER_EMBLEM2",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                }
+            ]
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "chalk",
+            "diorite",
+            "emery",
+            "gabbro",
+            "flint"
+        ],
+        "uuid": "85c17956-99fb-49dc-87ce-5c60ba590e6f",
+        "watchapp": {
+            "watchface": true
+        }
+    },
+    "version": "1.0.0"
+}
