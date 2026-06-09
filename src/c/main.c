@@ -64,17 +64,20 @@ static void draw_center_emblem(GContext *ctx, GPoint center) {
 static void canvas_update_proc(Layer *layer, GContext *ctx) {
   const GRect bounds = layer_get_bounds(layer);
   const GPoint center = grect_center_point(&bounds);
+  const BatteryChargeState battery_state = battery_state_service_peek();
 
   time_t now = time(NULL);
   struct tm *tick_time = localtime(&now);
 
   char time_buffer[6];
   char date_buffer[16];
-  char footer_buffer[32];
+  char battery_buffer[8];
+  char footer_buffer[40];
 
   clock_copy_time_string(time_buffer, sizeof(time_buffer));
   strftime(date_buffer, sizeof(date_buffer), "%a %e", tick_time);
-  snprintf(footer_buffer, sizeof(footer_buffer), "%s  %s", date_buffer, s_temperature_text);
+  snprintf(battery_buffer, sizeof(battery_buffer), "%d%%", battery_state.charge_percent);
+  snprintf(footer_buffer, sizeof(footer_buffer), "%s  %s  %s", battery_buffer, date_buffer, s_temperature_text);
 
   graphics_context_set_fill_color(ctx, color_bg());
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
