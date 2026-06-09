@@ -12,7 +12,6 @@ static GBitmap *s_center_emblem_2;
 static GBitmap *s_center_emblem_3;
 static bool s_manual_emblem_override = false;
 static bool s_manual_use_emblem_3 = false;
-static AppTimer *s_select_hold_timer = NULL;
 
 static void request_temperature_update(void) {
   DictionaryIterator *iter;
@@ -137,26 +136,12 @@ static void toggle_manual_emblem(void) {
   }
 }
 
-static void select_hold_timer_callback(void *context) {
-  s_select_hold_timer = NULL;
+static void down_long_click_handler(ClickRecognizerRef recognizer, void *context) {
   toggle_manual_emblem();
 }
 
-static void select_down_handler(ClickRecognizerRef recognizer, void *context) {
-  if (!s_select_hold_timer) {
-    s_select_hold_timer = app_timer_register(700, select_hold_timer_callback, NULL);
-  }
-}
-
-static void select_up_handler(ClickRecognizerRef recognizer, void *context) {
-  if (s_select_hold_timer) {
-    app_timer_cancel(s_select_hold_timer);
-    s_select_hold_timer = NULL;
-  }
-}
-
 static void click_config_provider(void *context) {
-  window_raw_click_subscribe(BUTTON_ID_SELECT, select_down_handler, select_up_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_DOWN, 700, down_long_click_handler, NULL);
 }
 
 static void main_window_load(Window *window) {
@@ -199,9 +184,6 @@ static void init(void) {
 }
 
 static void deinit(void) {
-  if (s_select_hold_timer) {
-    app_timer_cancel(s_select_hold_timer);
-  }
   tick_timer_service_unsubscribe();
   window_destroy(s_main_window);
 }
