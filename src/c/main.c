@@ -7,7 +7,8 @@ static const uint32_t KEY_WEATHER_REQUEST = 1;
 
 static Window *s_main_window;
 static Layer *s_canvas_layer;
-static GBitmap *s_center_emblem;
+static GBitmap *s_center_emblem_2;
+static GBitmap *s_center_emblem_3;
 
 static void request_temperature_update(void) {
   DictionaryIterator *iter;
@@ -46,19 +47,24 @@ static GColor color_text(void) {
 #endif
 }
 
-static void draw_center_emblem(GContext *ctx, GPoint center) {
-  if (!s_center_emblem) {
+static GBitmap *active_emblem_for_time(const struct tm *tick_time) {
+  return (tick_time->tm_hour % 2 == 0) ? s_center_emblem_2 : s_center_emblem_3;
+}
+
+static void draw_center_emblem(GContext *ctx, GPoint center, const struct tm *tick_time) {
+  GBitmap *active_emblem = active_emblem_for_time(tick_time);
+  if (!active_emblem) {
     return;
   }
 
-  const GRect emblem_bounds = gbitmap_get_bounds(s_center_emblem);
+  const GRect emblem_bounds = gbitmap_get_bounds(active_emblem);
   const GRect dest = GRect(center.x - emblem_bounds.size.w / 2,
                            center.y - emblem_bounds.size.h / 2 + s_emblem_y_offset,
                            emblem_bounds.size.w,
                            emblem_bounds.size.h);
 
   graphics_context_set_compositing_mode(ctx, GCompOpSet);
-  graphics_draw_bitmap_in_rect(ctx, s_center_emblem, dest);
+  graphics_draw_bitmap_in_rect(ctx, active_emblem, dest);
 }
 
 static void canvas_update_proc(Layer *layer, GContext *ctx) {
@@ -91,7 +97,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                      GTextAlignmentCenter,
                      NULL);
 
-  draw_center_emblem(ctx, center);
+  draw_center_emblem(ctx, center, tick_time);
 
   graphics_draw_text(ctx,
                      footer_buffer,
@@ -115,7 +121,8 @@ static void main_window_load(Window *window) {
 
   window_set_background_color(window, color_bg());
 
-  s_center_emblem = gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM2);
+  s_center_emblem_2 = gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM2);
+  s_center_emblem_3 = gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM3);
   s_canvas_layer = layer_create(bounds);
   layer_set_update_proc(s_canvas_layer, canvas_update_proc);
   layer_add_child(window_layer, s_canvas_layer);
@@ -123,7 +130,8 @@ static void main_window_load(Window *window) {
 
 static void main_window_unload(Window *window) {
   layer_destroy(s_canvas_layer);
-  gbitmap_destroy(s_center_emblem);
+  gbitmap_destroy(s_center_emblem_2);
+  gbitmap_destroy(s_center_emblem_3);
 }
 
 static void init(void) {

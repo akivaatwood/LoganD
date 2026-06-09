@@ -26,6 +26,12 @@
                     "name": "CENTER_EMBLEM2",
                     "targetPlatforms": null,
                     "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem3.png",
+                    "name": "CENTER_EMBLEM3",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
                 }
             ]
         },
