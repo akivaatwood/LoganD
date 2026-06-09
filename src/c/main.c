@@ -136,12 +136,12 @@ static void toggle_manual_emblem(void) {
   }
 }
 
-static void down_long_click_handler(ClickRecognizerRef recognizer, void *context) {
+static void back_double_click_handler(ClickRecognizerRef recognizer, void *context) {
   toggle_manual_emblem();
 }
 
 static void click_config_provider(void *context) {
-  window_long_click_subscribe(BUTTON_ID_DOWN, 400, down_long_click_handler, NULL);
+  window_multi_click_subscribe(BUTTON_ID_BACK, 2, 2, 300, false, back_double_click_handler);
 }
 
 static void main_window_load(Window *window) {
