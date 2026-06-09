@@ -8,7 +8,10 @@
     "pebble": {
         "displayName": "Logan Watchface",
         "enableMultiJS": true,
-        "messageKeys": [],
+        "messageKeys": [
+            "TEMPERATURE",
+            "WEATHER_REQUEST"
+        ],
         "projectType": "native",
         "resources": {
             "media": [

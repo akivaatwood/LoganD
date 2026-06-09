@@ -1,15 +1,27 @@
 #include <pebble.h>
-// GH test
 
-static const int16_t s_emblem_y_offset = 1;
+static const int16_t s_emblem_y_offset = 2;
 static char s_temperature_text[8] = "--°";
+static const uint32_t KEY_TEMPERATURE = 0;
+static const uint32_t KEY_WEATHER_REQUEST = 1;
 
 static Window *s_main_window;
 static Layer *s_canvas_layer;
 static GBitmap *s_center_emblem;
 
+static void request_temperature_update(void) {
+  DictionaryIterator *iter;
+  if (app_message_outbox_begin(&iter) != APP_MSG_OK || !iter) {
+    return;
+  }
+
+  dict_write_uint8(iter, KEY_WEATHER_REQUEST, 1);
+  dict_write_end(iter);
+  app_message_outbox_send();
+}
+
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
-  Tuple *temperature_t = dict_find(iterator, 0);
+  Tuple *temperature_t = dict_find(iterator, KEY_TEMPERATURE);
   if (temperature_t) {
     snprintf(s_temperature_text, sizeof(s_temperature_text), "%s", temperature_t->value->cstring);
     if (s_canvas_layer) {
@@ -88,6 +100,9 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
+  if (tick_time->tm_min % 30 == 0) {
+    request_temperature_update();
+  }
   layer_mark_dirty(s_canvas_layer);
 }
 
@@ -110,7 +125,7 @@ static void main_window_unload(Window *window) {
 
 static void init(void) {
   app_message_register_inbox_received(inbox_received_callback);
-  app_message_open(64, 64);
+  app_message_open(128, 128);
 
   s_main_window = window_create();
   window_set_window_handlers(s_main_window, (WindowHandlers) {
@@ -120,6 +135,7 @@ static void init(void) {
   window_stack_push(s_main_window, true);
 
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
+  request_temperature_update();
 }
 
 static void deinit(void) {

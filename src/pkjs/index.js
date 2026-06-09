@@ -59,6 +59,7 @@ Pebble.addEventListener('ready', function() {
   requestTemperature();
 });
 
-Pebble.addEventListener('appmessage', function() {
+Pebble.addEventListener('appmessage', function(e) {
+  console.log('appmessage received: ' + JSON.stringify(e.payload || {}));
   requestTemperature();
 });
