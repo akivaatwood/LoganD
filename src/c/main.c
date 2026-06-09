@@ -141,7 +141,7 @@ static void down_long_click_handler(ClickRecognizerRef recognizer, void *context
 }
 
 static void click_config_provider(void *context) {
-  window_long_click_subscribe(BUTTON_ID_DOWN, 700, down_long_click_handler, NULL);
+  window_long_click_subscribe(BUTTON_ID_DOWN, 400, down_long_click_handler, NULL);
 }
 
 static void main_window_load(Window *window) {
