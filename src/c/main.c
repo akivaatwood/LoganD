@@ -4,11 +4,14 @@ static const int16_t s_emblem_y_offset = 2;
 static char s_temperature_text[8] = "--°";
 static const uint32_t KEY_TEMPERATURE = 0;
 static const uint32_t KEY_WEATHER_REQUEST = 1;
+static const uint32_t PERSIST_KEY_TEMPERATURE_TEXT = 1;
 
 static Window *s_main_window;
 static Layer *s_canvas_layer;
 static GBitmap *s_center_emblem_2;
 static GBitmap *s_center_emblem_3;
+static bool s_manual_emblem_override = false;
+static bool s_manual_use_emblem_3 = false;
 
 static void request_temperature_update(void) {
   DictionaryIterator *iter;
@@ -23,8 +26,9 @@ static void request_temperature_update(void) {
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   Tuple *temperature_t = dict_find(iterator, KEY_TEMPERATURE);
-  if (temperature_t) {
+  if (temperature_t && temperature_t->type == TUPLE_CSTRING && strlen(temperature_t->value->cstring) > 0) {
     snprintf(s_temperature_text, sizeof(s_temperature_text), "%s", temperature_t->value->cstring);
+    persist_write_string(PERSIST_KEY_TEMPERATURE_TEXT, s_temperature_text);
     if (s_canvas_layer) {
       layer_mark_dirty(s_canvas_layer);
     }
@@ -48,6 +52,10 @@ static GColor color_text(void) {
 }
 
 static GBitmap *active_emblem_for_time(const struct tm *tick_time) {
+  if (s_manual_emblem_override) {
+    return s_manual_use_emblem_3 ? s_center_emblem_3 : s_center_emblem_2;
+  }
+
   return (tick_time->tm_hour % 2 == 0) ? s_center_emblem_2 : s_center_emblem_3;
 }
 
@@ -115,6 +123,23 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   layer_mark_dirty(s_canvas_layer);
 }
 
+static void select_long_click_handler(ClickRecognizerRef recognizer, void *context) {
+  time_t now = time(NULL);
+  struct tm *tick_time = localtime(&now);
+  GBitmap *auto_emblem = active_emblem_for_time(tick_time);
+
+  s_manual_emblem_override = true;
+  s_manual_use_emblem_3 = (auto_emblem == s_center_emblem_2);
+  request_temperature_update();
+  if (s_canvas_layer) {
+    layer_mark_dirty(s_canvas_layer);
+  }
+}
+
+static void click_config_provider(void *context) {
+  window_long_click_subscribe(BUTTON_ID_SELECT, 700, select_long_click_handler, NULL);
+}
+
 static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
@@ -135,10 +160,15 @@ static void main_window_unload(Window *window) {
 }
 
 static void init(void) {
+  if (persist_exists(PERSIST_KEY_TEMPERATURE_TEXT)) {
+    persist_read_string(PERSIST_KEY_TEMPERATURE_TEXT, s_temperature_text, sizeof(s_temperature_text));
+  }
+
   app_message_register_inbox_received(inbox_received_callback);
   app_message_open(128, 128);
 
   s_main_window = window_create();
+  window_set_click_config_provider(s_main_window, click_config_provider);
   window_set_window_handlers(s_main_window, (WindowHandlers) {
     .load = main_window_load,
     .unload = main_window_unload,
