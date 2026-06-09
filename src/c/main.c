@@ -4,6 +4,7 @@ static const int16_t s_emblem_y_offset = 2;
 static char s_temperature_text[8] = "--°";
 static const uint32_t KEY_TEMPERATURE = 0;
 static const uint32_t KEY_WEATHER_REQUEST = 1;
+static const uint32_t VERSION = 1;
 static const uint32_t PERSIST_KEY_TEMPERATURE_TEXT = 1;
 
 static Window *s_main_window;
