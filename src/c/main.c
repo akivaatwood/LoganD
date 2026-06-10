@@ -13,6 +13,10 @@ static GBitmap *s_center_emblem_3;
 static bool s_manual_emblem_override = false;
 static bool s_manual_use_emblem_3 = false;
 
+static bool is_placeholder_temperature(const char *value) {
+  return strcmp(value, "--°") == 0;
+}
+
 static void request_temperature_update(void) {
   DictionaryIterator *iter;
   if (app_message_outbox_begin(&iter) != APP_MSG_OK || !iter) {
@@ -27,6 +31,11 @@ static void request_temperature_update(void) {
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   Tuple *temperature_t = dict_find(iterator, KEY_TEMPERATURE);
   if (temperature_t && temperature_t->type == TUPLE_CSTRING && strlen(temperature_t->value->cstring) > 0) {
+    if (is_placeholder_temperature(temperature_t->value->cstring) &&
+        !is_placeholder_temperature(s_temperature_text)) {
+      return;
+    }
+
     snprintf(s_temperature_text, sizeof(s_temperature_text), "%s", temperature_t->value->cstring);
     persist_write_string(PERSIST_KEY_TEMPERATURE_TEXT, s_temperature_text);
     if (s_canvas_layer) {

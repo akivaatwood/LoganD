@@ -1,7 +1,12 @@
-var lastTemperature = null;
+var STORAGE_KEY_TEMPERATURE = 'lastTemperature';
+var PLACEHOLDER_TEMPERATURE = '--°';
+var lastTemperature = localStorage.getItem(STORAGE_KEY_TEMPERATURE);
 
 function sendTemperature(value) {
   lastTemperature = value;
+  if (value !== PLACEHOLDER_TEMPERATURE) {
+    localStorage.setItem(STORAGE_KEY_TEMPERATURE, value);
+  }
   Pebble.sendAppMessage({
     0: value
   }, function() {
@@ -14,9 +19,7 @@ function sendTemperature(value) {
 function requestTemperature() {
   if (!navigator.geolocation) {
     if (lastTemperature === null) {
-      if (lastTemperature === null) {
-        sendTemperature('--°');
-      }
+      sendTemperature(PLACEHOLDER_TEMPERATURE);
     }
     return;
   }
@@ -43,13 +46,13 @@ function requestTemperature() {
       }
 
       if (lastTemperature === null) {
-        sendTemperature('--°');
+        sendTemperature(PLACEHOLDER_TEMPERATURE);
       }
     };
 
     xhr.onerror = function() {
       if (lastTemperature === null) {
-        sendTemperature('--°');
+        sendTemperature(PLACEHOLDER_TEMPERATURE);
       }
     };
 
@@ -58,7 +61,7 @@ function requestTemperature() {
   }, function(error) {
     console.log('geolocation failed: ' + JSON.stringify(error));
     if (lastTemperature === null) {
-      sendTemperature('--°');
+      sendTemperature(PLACEHOLDER_TEMPERATURE);
     }
   }, {
     enableHighAccuracy: false,
