@@ -1,5 +1,7 @@
 #include <pebble.h>
 
+/* Version: 2026-06-10 */
+
 static const int16_t s_emblem_y_offset = 2;
 static char s_temperature_text[8] = "--°";
 static const uint32_t KEY_TEMPERATURE = 0;
