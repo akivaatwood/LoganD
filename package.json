@@ -91,6 +91,13 @@
                     "name": "CENTER_EMBLEM11",
                     "targetPlatforms": null,
                     "type": "bitmap"
+                },
+                {
+                    "file": "images/icon.png",
+                    "menuIcon": true,
+                    "name": "MENU_ICON",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
                 }
             ]
         },
