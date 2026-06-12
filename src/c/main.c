@@ -1,8 +1,9 @@
 #include <pebble.h>
 
-/* Version: 2026-06-10 */
+/* Version: 2026-06-12 */
 
 static const int16_t s_emblem_y_offset = 2;
+static const size_t EMBLEM_COUNT = 12;
 static char s_temperature_text[8] = "--°";
 static const uint32_t KEY_TEMPERATURE = 0;
 static const uint32_t KEY_WEATHER_REQUEST = 1;
@@ -10,10 +11,7 @@ static const uint32_t PERSIST_KEY_TEMPERATURE_TEXT = 1;
 
 static Window *s_main_window;
 static Layer *s_canvas_layer;
-static GBitmap *s_center_emblem_2;
-static GBitmap *s_center_emblem_3;
-static bool s_manual_emblem_override = false;
-static bool s_manual_use_emblem_3 = false;
+static GBitmap *s_center_emblems[12];
 
 static bool is_placeholder_temperature(const char *value) {
   return strcmp(value, "--°") == 0;
@@ -63,11 +61,8 @@ static GColor color_text(void) {
 }
 
 static GBitmap *active_emblem_for_time(const struct tm *tick_time) {
-  if (s_manual_emblem_override) {
-    return s_manual_use_emblem_3 ? s_center_emblem_3 : s_center_emblem_2;
-  }
-
-  return (tick_time->tm_hour % 2 == 0) ? s_center_emblem_2 : s_center_emblem_3;
+  const int index = (tick_time->tm_min / 5) % EMBLEM_COUNT;
+  return s_center_emblems[index];
 }
 
 static void draw_center_emblem(GContext *ctx, GPoint center, const struct tm *tick_time) {
@@ -134,44 +129,48 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   layer_mark_dirty(s_canvas_layer);
 }
 
-static void toggle_manual_emblem(void) {
-  time_t now = time(NULL);
-  struct tm *tick_time = localtime(&now);
-  GBitmap *auto_emblem = active_emblem_for_time(tick_time);
-
-  s_manual_emblem_override = true;
-  s_manual_use_emblem_3 = (auto_emblem == s_center_emblem_2);
-  request_temperature_update();
-  if (s_canvas_layer) {
-    layer_mark_dirty(s_canvas_layer);
+static GBitmap *load_emblem_resource(size_t index) {
+  switch (index) {
+    case 0: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM0);
+    case 1: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM1);
+    case 2: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM2);
+    case 3: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM3);
+    case 4: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM4);
+    case 5: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM5);
+    case 6: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM6);
+    case 7: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM7);
+    case 8: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM8);
+    case 9: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM9);
+    case 10: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM10);
+    case 11: return gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM11);
   }
-}
 
-static void back_double_click_handler(ClickRecognizerRef recognizer, void *context) {
-  toggle_manual_emblem();
-}
-
-static void click_config_provider(void *context) {
-  window_multi_click_subscribe(BUTTON_ID_BACK, 2, 2, 300, false, back_double_click_handler);
+  return NULL;
 }
 
 static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
+  size_t i;
 
   window_set_background_color(window, color_bg());
 
-  s_center_emblem_2 = gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM2);
-  s_center_emblem_3 = gbitmap_create_with_resource(RESOURCE_ID_CENTER_EMBLEM3);
+  for (i = 0; i < EMBLEM_COUNT; i += 1) {
+    s_center_emblems[i] = load_emblem_resource(i);
+  }
+
   s_canvas_layer = layer_create(bounds);
   layer_set_update_proc(s_canvas_layer, canvas_update_proc);
   layer_add_child(window_layer, s_canvas_layer);
 }
 
 static void main_window_unload(Window *window) {
+  size_t i;
+
   layer_destroy(s_canvas_layer);
-  gbitmap_destroy(s_center_emblem_2);
-  gbitmap_destroy(s_center_emblem_3);
+  for (i = 0; i < EMBLEM_COUNT; i += 1) {
+    gbitmap_destroy(s_center_emblems[i]);
+  }
 }
 
 static void init(void) {
@@ -183,7 +182,6 @@ static void init(void) {
   app_message_open(128, 128);
 
   s_main_window = window_create();
-  window_set_click_config_provider(s_main_window, click_config_provider);
   window_set_window_handlers(s_main_window, (WindowHandlers) {
     .load = main_window_load,
     .unload = main_window_unload,

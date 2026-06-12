@@ -16,8 +16,14 @@
         "resources": {
             "media": [
                 {
-                    "file": "images/center-emblem.png",
-                    "name": "CENTER_EMBLEM",
+                    "file": "images/center-emblem0.png",
+                    "name": "CENTER_EMBLEM0",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem1.png",
+                    "name": "CENTER_EMBLEM1",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
@@ -30,6 +36,54 @@
                 {
                     "file": "images/center-emblem3.png",
                     "name": "CENTER_EMBLEM3",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem4.png",
+                    "name": "CENTER_EMBLEM4",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem5.png",
+                    "name": "CENTER_EMBLEM5",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem6.png",
+                    "name": "CENTER_EMBLEM6",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem7.png",
+                    "name": "CENTER_EMBLEM7",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem8.png",
+                    "name": "CENTER_EMBLEM8",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem9.png",
+                    "name": "CENTER_EMBLEM9",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem10.png",
+                    "name": "CENTER_EMBLEM10",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/center-emblem11.png",
+                    "name": "CENTER_EMBLEM11",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 }
