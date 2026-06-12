@@ -12,6 +12,7 @@ static const uint32_t PERSIST_KEY_TEMPERATURE_TEXT = 1;
 static Window *s_main_window;
 static Layer *s_canvas_layer;
 static GBitmap *s_center_emblems[12];
+static size_t s_current_emblem_index = 0;
 
 static bool is_placeholder_temperature(const char *value) {
   return strcmp(value, "--°") == 0;
@@ -60,25 +61,28 @@ static GColor color_text(void) {
 #endif
 }
 
-static GBitmap *active_emblem_for_time(const struct tm *tick_time) {
-  const int index = (tick_time->tm_min / 5) % EMBLEM_COUNT;
-  return s_center_emblems[index];
+static void update_active_emblem_index(const struct tm *tick_time) {
+  s_current_emblem_index = (size_t)((tick_time->tm_min / 5) % EMBLEM_COUNT);
+}
+
+static GBitmap *active_emblem(void) {
+  return s_center_emblems[s_current_emblem_index];
 }
 
 static void draw_center_emblem(GContext *ctx, GPoint center, const struct tm *tick_time) {
-  GBitmap *active_emblem = active_emblem_for_time(tick_time);
-  if (!active_emblem) {
+  GBitmap *current_emblem = active_emblem();
+  if (!current_emblem) {
     return;
   }
 
-  const GRect emblem_bounds = gbitmap_get_bounds(active_emblem);
+  const GRect emblem_bounds = gbitmap_get_bounds(current_emblem);
   const GRect dest = GRect(center.x - emblem_bounds.size.w / 2,
                            center.y - emblem_bounds.size.h / 2 + s_emblem_y_offset,
                            emblem_bounds.size.w,
                            emblem_bounds.size.h);
 
   graphics_context_set_compositing_mode(ctx, GCompOpSet);
-  graphics_draw_bitmap_in_rect(ctx, active_emblem, dest);
+  graphics_draw_bitmap_in_rect(ctx, current_emblem, dest);
 }
 
 static void canvas_update_proc(Layer *layer, GContext *ctx) {
@@ -123,6 +127,8 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
+  update_active_emblem_index(tick_time);
+
   if (tick_time->tm_min % 30 == 0) {
     request_temperature_update();
   }
@@ -151,6 +157,8 @@ static GBitmap *load_emblem_resource(size_t index) {
 static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
+  time_t now = time(NULL);
+  struct tm *tick_time = localtime(&now);
   size_t i;
 
   window_set_background_color(window, color_bg());
@@ -158,6 +166,8 @@ static void main_window_load(Window *window) {
   for (i = 0; i < EMBLEM_COUNT; i += 1) {
     s_center_emblems[i] = load_emblem_resource(i);
   }
+
+  update_active_emblem_index(tick_time);
 
   s_canvas_layer = layer_create(bounds);
   layer_set_update_proc(s_canvas_layer, canvas_update_proc);
