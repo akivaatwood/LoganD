@@ -6,6 +6,9 @@
     ],
     "name": "logan",
     "pebble": {
+        "capabilities": [
+            "configurable"
+        ],
         "displayName": "Logan Watchface",
         "enableMultiJS": true,
         "messageKeys": [
