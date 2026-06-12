@@ -4,6 +4,20 @@
 
 static const int16_t s_emblem_y_offset = 2;
 static const size_t EMBLEM_COUNT = 12;
+static const char *const s_emblem_labels[12] = {
+  "Champions of Fenris",
+  "Bloodmaws",
+  "Seawolves",
+  "Sons of Morkai",
+  "Red Moons",
+  "Deathwolves",
+  "Stormwolves",
+  "Ironwolves",
+  "Drakeslayers",
+  "Blackmanes",
+  "Firehowlers",
+  "Grimbloods"
+};
 static char s_temperature_text[8] = "--°";
 static const uint32_t KEY_TEMPERATURE = 0;
 static const uint32_t KEY_WEATHER_REQUEST = 1;
@@ -79,6 +93,7 @@ static void update_emblem_layer_bitmap(void) {
 static void canvas_update_proc(Layer *layer, GContext *ctx) {
   const GRect bounds = layer_get_bounds(layer);
   const BatteryChargeState battery_state = battery_state_service_peek();
+  GBitmap *current_emblem = active_emblem();
 
   time_t now = time(NULL);
   struct tm *tick_time = localtime(&now);
@@ -87,11 +102,18 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   char date_buffer[16];
   char battery_buffer[8];
   char footer_buffer[40];
+  GRect label_rect = GRect(0, 136, bounds.size.w, 20);
 
   clock_copy_time_string(time_buffer, sizeof(time_buffer));
   strftime(date_buffer, sizeof(date_buffer), "%a %e", tick_time);
   snprintf(battery_buffer, sizeof(battery_buffer), "%d%%", battery_state.charge_percent);
   snprintf(footer_buffer, sizeof(footer_buffer), "%s  %s  %s", battery_buffer, date_buffer, s_temperature_text);
+
+  if (current_emblem) {
+    GRect emblem_bounds = gbitmap_get_bounds(current_emblem);
+    label_rect.origin.y = ((bounds.size.h / 2) - (emblem_bounds.size.h / 2)) +
+                          s_emblem_y_offset + emblem_bounds.size.h + 4;
+  }
 
   graphics_context_set_fill_color(ctx, color_bg());
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
@@ -101,6 +123,14 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                      time_buffer,
                      fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD),
                      GRect(0, 8, bounds.size.w, 50),
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter,
+                     NULL);
+
+  graphics_draw_text(ctx,
+                     s_emblem_labels[s_current_emblem_index],
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     label_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter,
                      NULL);
