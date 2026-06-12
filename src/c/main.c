@@ -11,6 +11,7 @@ static const uint32_t PERSIST_KEY_TEMPERATURE_TEXT = 1;
 
 static Window *s_main_window;
 static Layer *s_canvas_layer;
+static BitmapLayer *s_emblem_layer;
 static GBitmap *s_center_emblems[12];
 static size_t s_current_emblem_index = 0;
 
@@ -69,25 +70,14 @@ static GBitmap *active_emblem(void) {
   return s_center_emblems[s_current_emblem_index];
 }
 
-static void draw_center_emblem(GContext *ctx, GPoint center, const struct tm *tick_time) {
-  GBitmap *current_emblem = active_emblem();
-  if (!current_emblem) {
-    return;
+static void update_emblem_layer_bitmap(void) {
+  if (s_emblem_layer) {
+    bitmap_layer_set_bitmap(s_emblem_layer, active_emblem());
   }
-
-  const GRect emblem_bounds = gbitmap_get_bounds(current_emblem);
-  const GRect dest = GRect(center.x - emblem_bounds.size.w / 2,
-                           center.y - emblem_bounds.size.h / 2 + s_emblem_y_offset,
-                           emblem_bounds.size.w,
-                           emblem_bounds.size.h);
-
-  graphics_context_set_compositing_mode(ctx, GCompOpSet);
-  graphics_draw_bitmap_in_rect(ctx, current_emblem, dest);
 }
 
 static void canvas_update_proc(Layer *layer, GContext *ctx) {
   const GRect bounds = layer_get_bounds(layer);
-  const GPoint center = grect_center_point(&bounds);
   const BatteryChargeState battery_state = battery_state_service_peek();
 
   time_t now = time(NULL);
@@ -115,8 +105,6 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                      GTextAlignmentCenter,
                      NULL);
 
-  draw_center_emblem(ctx, center, tick_time);
-
   graphics_draw_text(ctx,
                      footer_buffer,
                      fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
@@ -128,6 +116,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_active_emblem_index(tick_time);
+  update_emblem_layer_bitmap();
 
   if (tick_time->tm_min % 30 == 0) {
     request_temperature_update();
@@ -157,6 +146,7 @@ static GBitmap *load_emblem_resource(size_t index) {
 static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   const GRect bounds = layer_get_bounds(window_layer);
+  const GPoint center = grect_center_point(&bounds);
   time_t now = time(NULL);
   struct tm *tick_time = localtime(&now);
   size_t i;
@@ -172,11 +162,26 @@ static void main_window_load(Window *window) {
   s_canvas_layer = layer_create(bounds);
   layer_set_update_proc(s_canvas_layer, canvas_update_proc);
   layer_add_child(window_layer, s_canvas_layer);
+
+  {
+    GBitmap *current_emblem = active_emblem();
+    GRect emblem_bounds = gbitmap_get_bounds(current_emblem);
+    GRect emblem_frame = GRect(center.x - emblem_bounds.size.w / 2,
+                               center.y - emblem_bounds.size.h / 2 + s_emblem_y_offset,
+                               emblem_bounds.size.w,
+                               emblem_bounds.size.h);
+
+    s_emblem_layer = bitmap_layer_create(emblem_frame);
+    bitmap_layer_set_bitmap(s_emblem_layer, current_emblem);
+    bitmap_layer_set_compositing_mode(s_emblem_layer, GCompOpSet);
+    layer_add_child(window_layer, bitmap_layer_get_layer(s_emblem_layer));
+  }
 }
 
 static void main_window_unload(Window *window) {
   size_t i;
 
+  bitmap_layer_destroy(s_emblem_layer);
   layer_destroy(s_canvas_layer);
   for (i = 0; i < EMBLEM_COUNT; i += 1) {
     gbitmap_destroy(s_center_emblems[i]);
