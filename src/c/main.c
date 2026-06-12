@@ -21,13 +21,22 @@ static const char *const s_emblem_labels[12] = {
 static char s_temperature_text[8] = "--°";
 static const uint32_t KEY_TEMPERATURE = 0;
 static const uint32_t KEY_WEATHER_REQUEST = 1;
+static const uint32_t KEY_AUTO_ROTATE = 2;
+static const uint32_t KEY_FIXED_IMAGE_INDEX = 3;
 static const uint32_t PERSIST_KEY_TEMPERATURE_TEXT = 1;
+static const uint32_t PERSIST_KEY_AUTO_ROTATE = 2;
+static const uint32_t PERSIST_KEY_FIXED_IMAGE_INDEX = 3;
 
 static Window *s_main_window;
 static Layer *s_canvas_layer;
 static BitmapLayer *s_emblem_layer;
 static GBitmap *s_center_emblems[12];
 static size_t s_current_emblem_index = 0;
+static bool s_auto_rotate = true;
+static size_t s_fixed_emblem_index = 0;
+
+static void update_active_emblem_index(const struct tm *tick_time);
+static void update_emblem_layer_bitmap(void);
 
 static bool is_placeholder_temperature(const char *value) {
   return strcmp(value, "--°") == 0;
@@ -46,6 +55,9 @@ static void request_temperature_update(void) {
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   Tuple *temperature_t = dict_find(iterator, KEY_TEMPERATURE);
+  Tuple *auto_rotate_t = dict_find(iterator, KEY_AUTO_ROTATE);
+  Tuple *fixed_image_index_t = dict_find(iterator, KEY_FIXED_IMAGE_INDEX);
+
   if (temperature_t && temperature_t->type == TUPLE_CSTRING && strlen(temperature_t->value->cstring) > 0) {
     if (is_placeholder_temperature(temperature_t->value->cstring) &&
         !is_placeholder_temperature(s_temperature_text)) {
@@ -54,6 +66,29 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 
     snprintf(s_temperature_text, sizeof(s_temperature_text), "%s", temperature_t->value->cstring);
     persist_write_string(PERSIST_KEY_TEMPERATURE_TEXT, s_temperature_text);
+    if (s_canvas_layer) {
+      layer_mark_dirty(s_canvas_layer);
+    }
+  }
+
+  if (auto_rotate_t) {
+    s_auto_rotate = auto_rotate_t->value->int32 != 0;
+    persist_write_bool(PERSIST_KEY_AUTO_ROTATE, s_auto_rotate);
+  }
+
+  if (fixed_image_index_t) {
+    int32_t candidate_index = fixed_image_index_t->value->int32;
+    if (candidate_index >= 0 && candidate_index < (int32_t)EMBLEM_COUNT) {
+      s_fixed_emblem_index = (size_t)candidate_index;
+      persist_write_int(PERSIST_KEY_FIXED_IMAGE_INDEX, (int32_t)s_fixed_emblem_index);
+    }
+  }
+
+  if (auto_rotate_t || fixed_image_index_t) {
+    time_t now = time(NULL);
+    struct tm *tick_time = localtime(&now);
+    update_active_emblem_index(tick_time);
+    update_emblem_layer_bitmap();
     if (s_canvas_layer) {
       layer_mark_dirty(s_canvas_layer);
     }
@@ -77,7 +112,11 @@ static GColor color_text(void) {
 }
 
 static void update_active_emblem_index(const struct tm *tick_time) {
-  s_current_emblem_index = (size_t)((tick_time->tm_min / 5) % EMBLEM_COUNT);
+  if (s_auto_rotate) {
+    s_current_emblem_index = (size_t)((tick_time->tm_min / 5) % EMBLEM_COUNT);
+  } else {
+    s_current_emblem_index = s_fixed_emblem_index;
+  }
 }
 
 static GBitmap *active_emblem(void) {
@@ -221,6 +260,15 @@ static void main_window_unload(Window *window) {
 static void init(void) {
   if (persist_exists(PERSIST_KEY_TEMPERATURE_TEXT)) {
     persist_read_string(PERSIST_KEY_TEMPERATURE_TEXT, s_temperature_text, sizeof(s_temperature_text));
+  }
+  if (persist_exists(PERSIST_KEY_AUTO_ROTATE)) {
+    s_auto_rotate = persist_read_bool(PERSIST_KEY_AUTO_ROTATE);
+  }
+  if (persist_exists(PERSIST_KEY_FIXED_IMAGE_INDEX)) {
+    int persisted_index = persist_read_int(PERSIST_KEY_FIXED_IMAGE_INDEX);
+    if (persisted_index >= 0 && persisted_index < (int)EMBLEM_COUNT) {
+      s_fixed_emblem_index = (size_t)persisted_index;
+    }
   }
 
   app_message_register_inbox_received(inbox_received_callback);
