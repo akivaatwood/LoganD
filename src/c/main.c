@@ -136,6 +136,27 @@ static GColor color_battery(int charge_percent) {
 #endif
 }
 
+static void draw_outlined_text(GContext *ctx,
+                               const char *text,
+                               GFont font,
+                               GRect rect,
+                               GTextAlignment alignment,
+                               GColor fill_color) {
+  graphics_context_set_text_color(ctx, GColorBlack);
+  graphics_draw_text(ctx, text, font, GRect(rect.origin.x - 1, rect.origin.y, rect.size.w, rect.size.h),
+                     GTextOverflowModeTrailingEllipsis, alignment, NULL);
+  graphics_draw_text(ctx, text, font, GRect(rect.origin.x + 1, rect.origin.y, rect.size.w, rect.size.h),
+                     GTextOverflowModeTrailingEllipsis, alignment, NULL);
+  graphics_draw_text(ctx, text, font, GRect(rect.origin.x, rect.origin.y - 1, rect.size.w, rect.size.h),
+                     GTextOverflowModeTrailingEllipsis, alignment, NULL);
+  graphics_draw_text(ctx, text, font, GRect(rect.origin.x, rect.origin.y + 1, rect.size.w, rect.size.h),
+                     GTextOverflowModeTrailingEllipsis, alignment, NULL);
+
+  graphics_context_set_text_color(ctx, fill_color);
+  graphics_draw_text(ctx, text, font, rect,
+                     GTextOverflowModeTrailingEllipsis, alignment, NULL);
+}
+
 static void update_active_emblem_index(const struct tm *tick_time) {
   if (s_auto_rotate) {
     s_current_emblem_index = (size_t)((tick_time->tm_min / 5) % EMBLEM_COUNT);
@@ -183,14 +204,12 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, color_bg());
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
-  graphics_context_set_text_color(ctx, color_battery(battery_state.charge_percent));
-  graphics_draw_text(ctx,
+  draw_outlined_text(ctx,
                      battery_buffer,
                      fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                      battery_rect,
-                     GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft,
-                     NULL);
+                     color_battery(battery_state.charge_percent));
 
   graphics_context_set_text_color(ctx, color_text());
   graphics_draw_text(ctx,
