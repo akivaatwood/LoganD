@@ -238,7 +238,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 
   graphics_draw_text(ctx,
                      s_emblem_labels[s_current_emblem_index],
-                     fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
+                     fonts_get_system_font(FONT_KEY_GOTHIC_28_BOLD),
                      label_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter,
