@@ -111,6 +111,31 @@ static GColor color_text(void) {
 #endif
 }
 
+static GColor color_battery(int charge_percent) {
+#ifdef PBL_COLOR
+  int red;
+  int green;
+
+  if (charge_percent <= 10) {
+    return GColorFromRGB(255, 0, 0);
+  }
+
+  if (charge_percent >= 100) {
+    return GColorFromRGB(0, 255, 0);
+  }
+
+  if (charge_percent <= 50) {
+    green = ((charge_percent - 10) * 255) / 40;
+    return GColorFromRGB(255, green, 0);
+  }
+
+  red = 255 - (((charge_percent - 50) * 255) / 50);
+  return GColorFromRGB(red, 255, 0);
+#else
+  return GColorBlack;
+#endif
+}
+
 static void update_active_emblem_index(const struct tm *tick_time) {
   if (s_auto_rotate) {
     s_current_emblem_index = (size_t)((tick_time->tm_min / 5) % EMBLEM_COUNT);
@@ -141,8 +166,8 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   char date_buffer[16];
   char battery_buffer[8];
   GRect battery_rect = GRect(8, 0, (bounds.size.w / 2) - 8, 22);
+  GRect date_rect = GRect(0, 0, bounds.size.w, 22);
   GRect temperature_rect = GRect(bounds.size.w / 2, 0, (bounds.size.w / 2) - 8, 22);
-  GRect date_rect = GRect(8, bounds.size.h - 28, bounds.size.w / 2, 22);
   GRect label_rect = GRect(0, 136, bounds.size.w, 26);
 
   clock_copy_time_string(time_buffer, sizeof(time_buffer));
@@ -158,13 +183,22 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, color_bg());
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
-  graphics_context_set_text_color(ctx, color_text());
+  graphics_context_set_text_color(ctx, color_battery(battery_state.charge_percent));
   graphics_draw_text(ctx,
                      battery_buffer,
                      fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                      battery_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentLeft,
+                     NULL);
+
+  graphics_context_set_text_color(ctx, color_text());
+  graphics_draw_text(ctx,
+                     date_buffer,
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     date_rect,
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter,
                      NULL);
 
   graphics_draw_text(ctx,
@@ -178,7 +212,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   graphics_draw_text(ctx,
                      time_buffer,
                      fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD),
-                     GRect(0, 8, bounds.size.w, 50),
+                     GRect(0, 18, bounds.size.w, 50),
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter,
                      NULL);
@@ -191,13 +225,6 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                      GTextAlignmentCenter,
                      NULL);
 
-  graphics_draw_text(ctx,
-                     date_buffer,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
-                     date_rect,
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentLeft,
-                     NULL);
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
