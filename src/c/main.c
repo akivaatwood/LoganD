@@ -2,7 +2,7 @@
 
 /* Version: 2026-06-12 */
 
-static const int16_t s_emblem_y_offset = 2;
+static const int16_t s_emblem_y_offset = 7;
 static const size_t EMBLEM_COUNT = 12;
 static const char *const s_emblem_labels[12] = {
   "Champions of Fenris",
