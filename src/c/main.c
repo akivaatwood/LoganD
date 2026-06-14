@@ -140,13 +140,14 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   char time_buffer[6];
   char date_buffer[16];
   char battery_buffer[8];
-  char footer_buffer[40];
-  GRect label_rect = GRect(0, 136, bounds.size.w, 20);
+  GRect battery_rect = GRect(8, 0, (bounds.size.w / 2) - 8, 22);
+  GRect temperature_rect = GRect(bounds.size.w / 2, 0, (bounds.size.w / 2) - 8, 22);
+  GRect date_rect = GRect(8, bounds.size.h - 28, bounds.size.w / 2, 22);
+  GRect label_rect = GRect(0, 136, bounds.size.w, 26);
 
   clock_copy_time_string(time_buffer, sizeof(time_buffer));
   strftime(date_buffer, sizeof(date_buffer), "%a %e", tick_time);
   snprintf(battery_buffer, sizeof(battery_buffer), "%d%%", battery_state.charge_percent);
-  snprintf(footer_buffer, sizeof(footer_buffer), "%s  %s  %s", battery_buffer, date_buffer, s_temperature_text);
 
   if (current_emblem) {
     GRect emblem_bounds = gbitmap_get_bounds(current_emblem);
@@ -159,6 +160,22 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 
   graphics_context_set_text_color(ctx, color_text());
   graphics_draw_text(ctx,
+                     battery_buffer,
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     battery_rect,
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentLeft,
+                     NULL);
+
+  graphics_draw_text(ctx,
+                     s_temperature_text,
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     temperature_rect,
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentRight,
+                     NULL);
+
+  graphics_draw_text(ctx,
                      time_buffer,
                      fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD),
                      GRect(0, 8, bounds.size.w, 50),
@@ -168,18 +185,18 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 
   graphics_draw_text(ctx,
                      s_emblem_labels[s_current_emblem_index],
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
                      label_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter,
                      NULL);
 
   graphics_draw_text(ctx,
-                     footer_buffer,
+                     date_buffer,
                      fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
-                     GRect(0, bounds.size.h - 36, bounds.size.w, 28),
+                     date_rect,
                      GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter,
+                     GTextAlignmentLeft,
                      NULL);
 }
 
