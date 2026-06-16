@@ -2,7 +2,7 @@
 
 /* Version: 2026-06-12 */
 
-static const int16_t s_emblem_y_offset = 7;
+static const int16_t s_emblem_y_offset = 9;
 static const size_t EMBLEM_COUNT = 12;
 static const char *const s_emblem_labels[12] = {
   "Champions of Fenris",
@@ -136,25 +136,18 @@ static GColor color_battery(int charge_percent) {
 #endif
 }
 
-static void draw_outlined_text(GContext *ctx,
-                               const char *text,
-                               GFont font,
-                               GRect rect,
-                               GTextAlignment alignment,
-                               GColor fill_color) {
-  graphics_context_set_text_color(ctx, GColorBlack);
-  graphics_draw_text(ctx, text, font, GRect(rect.origin.x - 1, rect.origin.y, rect.size.w, rect.size.h),
-                     GTextOverflowModeTrailingEllipsis, alignment, NULL);
-  graphics_draw_text(ctx, text, font, GRect(rect.origin.x + 1, rect.origin.y, rect.size.w, rect.size.h),
-                     GTextOverflowModeTrailingEllipsis, alignment, NULL);
-  graphics_draw_text(ctx, text, font, GRect(rect.origin.x, rect.origin.y - 1, rect.size.w, rect.size.h),
-                     GTextOverflowModeTrailingEllipsis, alignment, NULL);
-  graphics_draw_text(ctx, text, font, GRect(rect.origin.x, rect.origin.y + 1, rect.size.w, rect.size.h),
-                     GTextOverflowModeTrailingEllipsis, alignment, NULL);
+static void draw_battery_badge(GContext *ctx, const char *text, GRect rect, GColor fill_color) {
+  graphics_context_set_fill_color(ctx, fill_color);
+  graphics_fill_rect(ctx, rect, 6, GCornersAll);
 
-  graphics_context_set_text_color(ctx, fill_color);
-  graphics_draw_text(ctx, text, font, rect,
-                     GTextOverflowModeTrailingEllipsis, alignment, NULL);
+  graphics_context_set_text_color(ctx, GColorBlack);
+  graphics_draw_text(ctx,
+                     text,
+                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     rect,
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter,
+                     NULL);
 }
 
 static void update_active_emblem_index(const struct tm *tick_time) {
@@ -186,9 +179,9 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   char time_buffer[6];
   char date_buffer[16];
   char battery_buffer[8];
-  GRect battery_rect = GRect(8, 0, (bounds.size.w / 2) - 8, 22);
-  GRect date_rect = GRect(0, 0, bounds.size.w, 22);
-  GRect temperature_rect = GRect(bounds.size.w / 2, 0, (bounds.size.w / 2) - 8, 22);
+  GRect battery_rect = GRect(8, 2, 50, 22);
+  GRect date_rect = GRect(0, 1, bounds.size.w, 24);
+  GRect temperature_rect = GRect(bounds.size.w - 58, 2, 50, 22);
   GRect label_rect = GRect(0, 136, bounds.size.w, 26);
 
   clock_copy_time_string(time_buffer, sizeof(time_buffer));
@@ -204,17 +197,12 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, color_bg());
   graphics_fill_rect(ctx, bounds, 0, GCornerNone);
 
-  draw_outlined_text(ctx,
-                     battery_buffer,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     battery_rect,
-                     GTextAlignmentLeft,
-                     color_battery(battery_state.charge_percent));
+  draw_battery_badge(ctx, battery_buffer, battery_rect, color_battery(battery_state.charge_percent));
 
   graphics_context_set_text_color(ctx, color_text());
   graphics_draw_text(ctx,
                      date_buffer,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
                      date_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentCenter,
@@ -222,7 +210,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
 
   graphics_draw_text(ctx,
                      s_temperature_text,
-                     fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                     fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
                      temperature_rect,
                      GTextOverflowModeTrailingEllipsis,
                      GTextAlignmentRight,
