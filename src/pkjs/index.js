@@ -23,8 +23,11 @@ var BG_COLOR_OPTIONS = [
   { value: 2, label: 'The Fang' },
   { value: 3, label: 'White' }
 ];
+var TEMPERATURE_REFRESH_MS = 15 * 60 * 1000;
 
 var lastTemperature = localStorage.getItem(STORAGE_KEY_TEMPERATURE);
+var refreshTimer = null;
+var temperatureRequestInFlight = false;
 
 function getAutoRotateSetting() {
   return localStorage.getItem(STORAGE_KEY_AUTO_ROTATE) !== 'false';
@@ -73,10 +76,17 @@ function sendSettings() {
 }
 
 function requestTemperature() {
+  if (temperatureRequestInFlight) {
+    return;
+  }
+
+  temperatureRequestInFlight = true;
+
   if (!navigator.geolocation) {
     if (lastTemperature === null) {
       sendTemperature(PLACEHOLDER_TEMPERATURE);
     }
+    temperatureRequestInFlight = false;
     return;
   }
 
@@ -95,6 +105,7 @@ function requestTemperature() {
         var response = JSON.parse(xhr.responseText);
         if (response && response.current && typeof response.current.temperature_2m === 'number') {
           sendTemperature(Math.round(response.current.temperature_2m) + '°');
+          temperatureRequestInFlight = false;
           return;
         }
       } catch (e) {
@@ -104,12 +115,14 @@ function requestTemperature() {
       if (lastTemperature === null) {
         sendTemperature(PLACEHOLDER_TEMPERATURE);
       }
+      temperatureRequestInFlight = false;
     };
 
     xhr.onerror = function() {
       if (lastTemperature === null) {
         sendTemperature(PLACEHOLDER_TEMPERATURE);
       }
+      temperatureRequestInFlight = false;
     };
 
     xhr.open('GET', url);
@@ -119,11 +132,22 @@ function requestTemperature() {
     if (lastTemperature === null) {
       sendTemperature(PLACEHOLDER_TEMPERATURE);
     }
+    temperatureRequestInFlight = false;
   }, {
     enableHighAccuracy: false,
     maximumAge: 30 * 60 * 1000,
     timeout: 15000
   });
+}
+
+function ensureTemperatureRefreshLoop() {
+  if (refreshTimer !== null) {
+    return;
+  }
+
+  refreshTimer = setInterval(function() {
+    requestTemperature();
+  }, TEMPERATURE_REFRESH_MS);
 }
 
 function buildConfigPage() {
@@ -186,6 +210,7 @@ function buildConfigPage() {
 Pebble.addEventListener('ready', function() {
   console.log('pkjs ready');
   sendSettings();
+  ensureTemperatureRefreshLoop();
   requestTemperature();
 });
 
