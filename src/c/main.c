@@ -23,9 +23,11 @@ static const uint32_t KEY_TEMPERATURE = 0;
 static const uint32_t KEY_WEATHER_REQUEST = 1;
 static const uint32_t KEY_AUTO_ROTATE = 2;
 static const uint32_t KEY_FIXED_IMAGE_INDEX = 3;
+static const uint32_t KEY_BG_COLOR = 4;
 static const uint32_t PERSIST_KEY_TEMPERATURE_TEXT = 1;
 static const uint32_t PERSIST_KEY_AUTO_ROTATE = 2;
 static const uint32_t PERSIST_KEY_FIXED_IMAGE_INDEX = 3;
+static const uint32_t PERSIST_KEY_BG_COLOR = 4;
 
 static Window *s_main_window;
 static Layer *s_canvas_layer;
@@ -34,9 +36,18 @@ static GBitmap *s_center_emblems[12];
 static size_t s_current_emblem_index = 0;
 static bool s_auto_rotate = true;
 static size_t s_fixed_emblem_index = 0;
+static int s_bg_color_index = 0;
 
 static void update_active_emblem_index(const struct tm *tick_time);
 static void update_emblem_layer_bitmap(void);
+static GColor color_bg(void);
+
+enum {
+  BG_COLOR_FENRISIAN_GREY = 0,
+  BG_COLOR_RUSS_GREY = 1,
+  BG_COLOR_THE_FANG = 2,
+  BG_COLOR_WHITE = 3
+};
 
 static bool is_placeholder_temperature(const char *value) {
   return strcmp(value, "--°") == 0;
@@ -57,6 +68,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *temperature_t = dict_find(iterator, KEY_TEMPERATURE);
   Tuple *auto_rotate_t = dict_find(iterator, KEY_AUTO_ROTATE);
   Tuple *fixed_image_index_t = dict_find(iterator, KEY_FIXED_IMAGE_INDEX);
+  Tuple *bg_color_t = dict_find(iterator, KEY_BG_COLOR);
 
   if (temperature_t && temperature_t->type == TUPLE_CSTRING && strlen(temperature_t->value->cstring) > 0) {
     if (is_placeholder_temperature(temperature_t->value->cstring) &&
@@ -84,7 +96,18 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     }
   }
 
-  if (auto_rotate_t || fixed_image_index_t) {
+  if (bg_color_t) {
+    int32_t candidate_bg = bg_color_t->value->int32;
+    if (candidate_bg >= BG_COLOR_FENRISIAN_GREY && candidate_bg <= BG_COLOR_WHITE) {
+      s_bg_color_index = (int)candidate_bg;
+      persist_write_int(PERSIST_KEY_BG_COLOR, s_bg_color_index);
+      if (s_main_window) {
+        window_set_background_color(s_main_window, color_bg());
+      }
+    }
+  }
+
+  if (auto_rotate_t || fixed_image_index_t || bg_color_t) {
     time_t now = time(NULL);
     struct tm *tick_time = localtime(&now);
     update_active_emblem_index(tick_time);
@@ -96,7 +119,21 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 }
 
 static GColor color_bg(void) {
+#ifdef PBL_COLOR
+  switch (s_bg_color_index) {
+    case BG_COLOR_RUSS_GREY:
+      return GColorFromHEX(0x585673);
+    case BG_COLOR_THE_FANG:
+      return GColorFromHEX(0x2F4351);
+    case BG_COLOR_WHITE:
+      return GColorWhite;
+    case BG_COLOR_FENRISIAN_GREY:
+    default:
+      return GColorFromHEX(0xCEDEE7);
+  }
+#else
   return GColorWhite;
+#endif
 }
 
 static GColor color_text(void) {
@@ -315,6 +352,12 @@ static void init(void) {
     int persisted_index = persist_read_int(PERSIST_KEY_FIXED_IMAGE_INDEX);
     if (persisted_index >= 0 && persisted_index < (int)EMBLEM_COUNT) {
       s_fixed_emblem_index = (size_t)persisted_index;
+    }
+  }
+  if (persist_exists(PERSIST_KEY_BG_COLOR)) {
+    int persisted_bg = persist_read_int(PERSIST_KEY_BG_COLOR);
+    if (persisted_bg >= BG_COLOR_FENRISIAN_GREY && persisted_bg <= BG_COLOR_WHITE) {
+      s_bg_color_index = persisted_bg;
     }
   }
 
