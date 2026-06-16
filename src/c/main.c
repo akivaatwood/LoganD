@@ -96,11 +96,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 }
 
 static GColor color_bg(void) {
-#ifdef PBL_COLOR
-  return GColorFromHEX(0xCEDEE7);
-#else
   return GColorWhite;
-#endif
 }
 
 static GColor color_text(void) {
