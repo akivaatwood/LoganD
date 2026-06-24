@@ -28,7 +28,7 @@ var TEMPERATURE_REFRESH_MS = 15 * 60 * 1000;
 var lastTemperature = localStorage.getItem(STORAGE_KEY_TEMPERATURE);
 var refreshTimer = null;
 var temperatureRequestInFlight = false;
-var pendingAppMessage = null;
+var pendingAppMessages = [];
 var appMessageInFlight = false;
 
 function getAutoRotateSetting() {
@@ -54,12 +54,11 @@ function getBackgroundColorSetting() {
 function flushPendingAppMessage() {
   var payload;
 
-  if (appMessageInFlight || pendingAppMessage === null) {
+  if (appMessageInFlight || pendingAppMessages.length === 0) {
     return;
   }
 
-  payload = pendingAppMessage;
-  pendingAppMessage = null;
+  payload = pendingAppMessages.shift();
   appMessageInFlight = true;
 
   Pebble.sendAppMessage(payload, function() {
@@ -68,13 +67,13 @@ function flushPendingAppMessage() {
   }, function(error) {
     console.log('send failed: ' + JSON.stringify(error));
     appMessageInFlight = false;
-    pendingAppMessage = payload;
+    pendingAppMessages.unshift(payload);
     setTimeout(flushPendingAppMessage, 1000);
   });
 }
 
 function queueAppMessage(payload) {
-  pendingAppMessage = payload;
+  pendingAppMessages.push(payload);
   flushPendingAppMessage();
 }
 
