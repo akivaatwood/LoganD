@@ -249,6 +249,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                      GTextAlignmentRight,
                      NULL);
 
+  graphics_context_set_text_color(ctx, GColorBlack);
   graphics_draw_text(ctx,
                      time_buffer,
                      fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD),
