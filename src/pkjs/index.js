@@ -121,7 +121,8 @@ function requestTemperature() {
       encodeURIComponent(latitude) +
       '&longitude=' +
       encodeURIComponent(longitude) +
-      '&current=temperature_2m&temperature_unit=celsius';
+      '&current=temperature_2m&temperature_unit=celsius' +
+      '&refresh=' + Date.now();
 
     var xhr = new XMLHttpRequest();
     xhr.onload = function() {
@@ -150,6 +151,8 @@ function requestTemperature() {
     };
 
     xhr.open('GET', url);
+    xhr.setRequestHeader('Cache-Control', 'no-cache');
+    xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.send();
   }, function(error) {
     console.log('geolocation failed: ' + JSON.stringify(error));
