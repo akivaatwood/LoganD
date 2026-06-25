@@ -4,16 +4,16 @@
     "keywords": [
         "pebble-app"
     ],
-    "name": "logan",
+    "name": "Space-Wolves",
     "pebble": {
         "capabilities": [
             "configurable"
         ],
-        "displayName": "Logan Watchface",
+        "displayName": "Space Wolves Watchface",
         "enableMultiJS": true,
         "messageKeys": [
             "TEMPERATURE",
-            "WEATHER_REQUEST",
+            "REQUEST_WEATHER",
             "AUTO_ROTATE",
             "FIXED_IMAGE_INDEX",
             "BG_COLOR"
@@ -117,5 +117,5 @@
             "watchface": true
         }
     },
-    "version": "1.0.0"
+    "version": "1.0.5"
 }

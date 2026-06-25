@@ -6,11 +6,12 @@
   ],
   "name": "logan",
   "version": "1.0.0",
-  "pebble": {
+    "pebble": {
     "displayName": "Logan Watchface",
     "enableMultiJS": true,
     "messageKeys": [
-      "TEMPERATURE"
+      "TEMPERATURE",
+      "REQUEST_WEATHER"
     ],
     "projectType": "native",
     "resources": {

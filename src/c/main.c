@@ -20,7 +20,6 @@ static const char *const s_emblem_labels[12] = {
 };
 static char s_temperature_text[8] = "--°";
 static const uint32_t KEY_TEMPERATURE = 0;
-static const uint32_t KEY_WEATHER_REQUEST = 1;
 static const uint32_t KEY_AUTO_ROTATE = 2;
 static const uint32_t KEY_FIXED_IMAGE_INDEX = 3;
 static const uint32_t KEY_BG_COLOR = 4;
@@ -59,7 +58,7 @@ static void request_temperature_update(void) {
     return;
   }
 
-  dict_write_uint8(iter, KEY_WEATHER_REQUEST, 1);
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
   dict_write_end(iter);
   app_message_outbox_send();
 }
@@ -272,7 +271,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_active_emblem_index(tick_time);
   update_emblem_layer_bitmap();
 
-  if (tick_time->tm_min % 30 == 0) {
+  if (tick_time->tm_min % 5 == 0) {
     request_temperature_update();
   }
   layer_mark_dirty(s_canvas_layer);

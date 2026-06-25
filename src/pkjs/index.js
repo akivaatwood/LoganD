@@ -23,10 +23,8 @@ var BG_COLOR_OPTIONS = [
   { value: 2, label: 'The Fang' },
   { value: 3, label: 'White' }
 ];
-var TEMPERATURE_REFRESH_MS = 15 * 60 * 1000;
 
 var lastTemperature = localStorage.getItem(STORAGE_KEY_TEMPERATURE);
-var refreshTimer = null;
 var temperatureRequestInFlight = false;
 var pendingAppMessages = [];
 var appMessageInFlight = false;
@@ -49,6 +47,10 @@ function getBackgroundColorSetting() {
     return 0;
   }
   return value;
+}
+
+function isWeatherRequest(payload) {
+  return payload && (payload[1] === 1 || payload.WEATHER_REQUEST === 1 || payload.REQUEST_WEATHER === 1);
 }
 
 function flushPendingAppMessage() {
@@ -157,19 +159,9 @@ function requestTemperature() {
     temperatureRequestInFlight = false;
   }, {
     enableHighAccuracy: false,
-    maximumAge: 30 * 60 * 1000,
+    maximumAge: 60 * 1000,
     timeout: 15000
   });
-}
-
-function ensureTemperatureRefreshLoop() {
-  if (refreshTimer !== null) {
-    return;
-  }
-
-  refreshTimer = setInterval(function() {
-    requestTemperature();
-  }, TEMPERATURE_REFRESH_MS);
 }
 
 function buildConfigPage() {
@@ -232,13 +224,14 @@ function buildConfigPage() {
 Pebble.addEventListener('ready', function() {
   console.log('pkjs ready');
   sendSettings();
-  ensureTemperatureRefreshLoop();
   requestTemperature();
 });
 
 Pebble.addEventListener('appmessage', function(e) {
   console.log('appmessage received: ' + JSON.stringify(e.payload || {}));
-  requestTemperature();
+  if (isWeatherRequest(e.payload)) {
+    requestTemperature();
+  }
 });
 
 Pebble.addEventListener('showConfiguration', function() {
