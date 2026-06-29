@@ -11,7 +11,9 @@
     "enableMultiJS": true,
     "messageKeys": [
       "TEMPERATURE",
-      "REQUEST_WEATHER"
+      "REQUEST_WEATHER",
+      "AUTO_ROTATE",
+      "FIXED_IMAGE_INDEX"
     ],
     "projectType": "native",
     "resources": {

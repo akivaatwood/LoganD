@@ -1,7 +1,6 @@
 var STORAGE_KEY_TEMPERATURE = 'lastTemperature';
 var STORAGE_KEY_AUTO_ROTATE = 'autoRotate';
 var STORAGE_KEY_FIXED_IMAGE_INDEX = 'fixedImageIndex';
-var STORAGE_KEY_BG_COLOR = 'bgColor';
 var PLACEHOLDER_TEMPERATURE = '--°';
 var EMBLEM_LABELS = [
   'Champions of Fenris',
@@ -16,12 +15,6 @@ var EMBLEM_LABELS = [
   'Blackmanes',
   'Firehowlers',
   'Grimbloods'
-];
-var BG_COLOR_OPTIONS = [
-  { value: 0, label: 'Fenrisian Grey' },
-  { value: 1, label: 'Russ Grey' },
-  { value: 2, label: 'The Fang' },
-  { value: 3, label: 'White' }
 ];
 var TEMPERATURE_REFRESH_MS = 15 * 60 * 1000;
 
@@ -38,14 +31,6 @@ function getAutoRotateSetting() {
 function getFixedImageIndexSetting() {
   var value = parseInt(localStorage.getItem(STORAGE_KEY_FIXED_IMAGE_INDEX) || '0', 10);
   if (isNaN(value) || value < 0 || value >= EMBLEM_LABELS.length) {
-    return 0;
-  }
-  return value;
-}
-
-function getBackgroundColorSetting() {
-  var value = parseInt(localStorage.getItem(STORAGE_KEY_BG_COLOR) || '0', 10);
-  if (isNaN(value) || value < 0 || value >= BG_COLOR_OPTIONS.length) {
     return 0;
   }
   return value;
@@ -96,8 +81,7 @@ function sendSettings() {
   console.log('queue settings');
   queueAppMessage({
     2: getAutoRotateSetting() ? 1 : 0,
-    3: getFixedImageIndexSetting(),
-    4: getBackgroundColorSetting()
+    3: getFixedImageIndexSetting()
   });
 }
 
@@ -182,19 +166,11 @@ function ensureTemperatureRefreshLoop() {
 function buildConfigPage() {
   var autoRotateChecked = getAutoRotateSetting();
   var fixedIndex = getFixedImageIndexSetting();
-  var bgColor = getBackgroundColorSetting();
   var optionsHtml = EMBLEM_LABELS.map(function(label, index) {
     return '<label class="option">' +
       '<input type="radio" name="fixedIndex" value="' + index + '"' +
       (index === fixedIndex ? ' checked' : '') + '>' +
       '<span>' + label + '</span>' +
-      '</label>';
-  }).join('');
-  var bgOptionsHtml = BG_COLOR_OPTIONS.map(function(option) {
-    return '<label class="option">' +
-      '<input type="radio" name="bgColor" value="' + option.value + '"' +
-      (option.value === bgColor ? ' checked' : '') + '>' +
-      '<span>' + option.label + '</span>' +
       '</label>';
   }).join('');
 
@@ -218,8 +194,6 @@ function buildConfigPage() {
     '<div class="hint">Auto Rotate changes every 5 minutes. Fixed Image keeps one image selected below.</div>' +
     '<h2>Fixed Image Choice</h2>' +
     optionsHtml +
-    '<h2>Background</h2>' +
-    bgOptionsHtml +
     '<div class="actions">' +
     '<button class="save" id="save">Save</button>' +
     '<button class="cancel" id="cancel" type="button">Cancel</button>' +
@@ -228,8 +202,7 @@ function buildConfigPage() {
     'document.getElementById("save").addEventListener("click",function(){' +
     'var mode=document.querySelector(\'input[name="mode"]:checked\').value;' +
     'var fixed=document.querySelector(\'input[name="fixedIndex"]:checked\').value;' +
-    'var bg=document.querySelector(\'input[name="bgColor"]:checked\').value;' +
-    'var result={autoRotate:mode==="auto",fixedImageIndex:parseInt(fixed,10),bgColor:parseInt(bg,10)};' +
+    'var result={autoRotate:mode==="auto",fixedImageIndex:parseInt(fixed,10)};' +
     'document.location="pebblejs://close#" + encodeURIComponent(JSON.stringify(result));' +
     '});' +
     'document.getElementById("cancel").addEventListener("click",function(){document.location="pebblejs://close#";});' +
@@ -270,6 +243,5 @@ Pebble.addEventListener('webviewclosed', function(e) {
 
   localStorage.setItem(STORAGE_KEY_AUTO_ROTATE, config.autoRotate ? 'true' : 'false');
   localStorage.setItem(STORAGE_KEY_FIXED_IMAGE_INDEX, String(config.fixedImageIndex));
-  localStorage.setItem(STORAGE_KEY_BG_COLOR, String(config.bgColor));
   sendSettings();
 });
