@@ -13,7 +13,8 @@
       "TEMPERATURE",
       "REQUEST_WEATHER",
       "AUTO_ROTATE",
-      "FIXED_IMAGE_INDEX"
+      "FIXED_IMAGE_INDEX",
+      "BG_COLOR"
     ],
     "projectType": "native",
     "resources": {
