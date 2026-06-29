@@ -4,6 +4,7 @@
 
 static const int16_t s_emblem_y_offset = 9;
 static const size_t EMBLEM_COUNT = 12;
+static const int32_t TEMPERATURE_TTL_SECONDS = 2 * 60 * 60;
 static const char *const s_emblem_labels[12] = {
   "Champions of Fenris",
   "Bloodmaws",
@@ -19,11 +20,13 @@ static const char *const s_emblem_labels[12] = {
   "Grimbloods"
 };
 static char s_temperature_text[8] = "--°";
+static time_t s_temperature_updated_at = 0;
 static const uint32_t KEY_TEMPERATURE = 0;
 static const uint32_t KEY_AUTO_ROTATE = 2;
 static const uint32_t KEY_FIXED_IMAGE_INDEX = 3;
 static const uint32_t KEY_BG_COLOR = 4;
 static const uint32_t PERSIST_KEY_TEMPERATURE_TEXT = 1;
+static const uint32_t PERSIST_KEY_TEMPERATURE_UPDATED_AT = 5;
 static const uint32_t PERSIST_KEY_AUTO_ROTATE = 2;
 static const uint32_t PERSIST_KEY_FIXED_IMAGE_INDEX = 3;
 static const uint32_t PERSIST_KEY_BG_COLOR = 4;
@@ -52,6 +55,21 @@ static bool is_placeholder_temperature(const char *value) {
   return strcmp(value, "--°") == 0;
 }
 
+static bool is_temperature_fresh(void) {
+  time_t now;
+
+  if (is_placeholder_temperature(s_temperature_text) || s_temperature_updated_at <= 0) {
+    return false;
+  }
+
+  now = time(NULL);
+  return difftime(now, s_temperature_updated_at) < TEMPERATURE_TTL_SECONDS;
+}
+
+static const char *display_temperature_text(void) {
+  return is_temperature_fresh() ? s_temperature_text : "--°";
+}
+
 static void request_temperature_update(void) {
   DictionaryIterator *iter;
   if (app_message_outbox_begin(&iter) != APP_MSG_OK || !iter) {
@@ -70,13 +88,19 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *bg_color_t = dict_find(iterator, KEY_BG_COLOR);
 
   if (temperature_t && temperature_t->type == TUPLE_CSTRING && strlen(temperature_t->value->cstring) > 0) {
-    if (is_placeholder_temperature(temperature_t->value->cstring) &&
-        !is_placeholder_temperature(s_temperature_text)) {
+    if (is_placeholder_temperature(temperature_t->value->cstring) && is_temperature_fresh()) {
       return;
     }
 
     snprintf(s_temperature_text, sizeof(s_temperature_text), "%s", temperature_t->value->cstring);
     persist_write_string(PERSIST_KEY_TEMPERATURE_TEXT, s_temperature_text);
+    if (is_placeholder_temperature(s_temperature_text)) {
+      s_temperature_updated_at = 0;
+      persist_write_int(PERSIST_KEY_TEMPERATURE_UPDATED_AT, 0);
+    } else {
+      s_temperature_updated_at = time(NULL);
+      persist_write_int(PERSIST_KEY_TEMPERATURE_UPDATED_AT, (int32_t)s_temperature_updated_at);
+    }
     if (s_canvas_layer) {
       layer_mark_dirty(s_canvas_layer);
     }
@@ -241,7 +265,7 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                      NULL);
 
   graphics_draw_text(ctx,
-                     s_temperature_text,
+                     display_temperature_text(),
                      fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
                      temperature_rect,
                      GTextOverflowModeTrailingEllipsis,
@@ -344,6 +368,12 @@ static void main_window_unload(Window *window) {
 static void init(void) {
   if (persist_exists(PERSIST_KEY_TEMPERATURE_TEXT)) {
     persist_read_string(PERSIST_KEY_TEMPERATURE_TEXT, s_temperature_text, sizeof(s_temperature_text));
+  }
+  if (persist_exists(PERSIST_KEY_TEMPERATURE_UPDATED_AT)) {
+    s_temperature_updated_at = (time_t)persist_read_int(PERSIST_KEY_TEMPERATURE_UPDATED_AT);
+  } else if (!is_placeholder_temperature(s_temperature_text)) {
+    s_temperature_updated_at = time(NULL);
+    persist_write_int(PERSIST_KEY_TEMPERATURE_UPDATED_AT, (int32_t)s_temperature_updated_at);
   }
   if (persist_exists(PERSIST_KEY_AUTO_ROTATE)) {
     s_auto_rotate = persist_read_bool(PERSIST_KEY_AUTO_ROTATE);

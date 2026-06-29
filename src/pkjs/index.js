@@ -23,8 +23,10 @@ var BG_COLOR_OPTIONS = [
   { value: 2, label: 'The Fang' },
   { value: 3, label: 'White' }
 ];
+var TEMPERATURE_REFRESH_MS = 15 * 60 * 1000;
 
 var lastTemperature = localStorage.getItem(STORAGE_KEY_TEMPERATURE);
+var refreshTimer = null;
 var temperatureRequestInFlight = false;
 var pendingAppMessages = [];
 var appMessageInFlight = false;
@@ -167,6 +169,16 @@ function requestTemperature() {
   });
 }
 
+function ensureTemperatureRefreshLoop() {
+  if (refreshTimer !== null) {
+    return;
+  }
+
+  refreshTimer = setInterval(function() {
+    requestTemperature();
+  }, TEMPERATURE_REFRESH_MS);
+}
+
 function buildConfigPage() {
   var autoRotateChecked = getAutoRotateSetting();
   var fixedIndex = getFixedImageIndexSetting();
@@ -227,6 +239,7 @@ function buildConfigPage() {
 Pebble.addEventListener('ready', function() {
   console.log('pkjs ready');
   sendSettings();
+  ensureTemperatureRefreshLoop();
   requestTemperature();
 });
 
