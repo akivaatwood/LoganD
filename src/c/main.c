@@ -173,7 +173,7 @@ static GColor emblem_bg_color(size_t index) {
     case 3: return GColorFromRGB(41, 41, 41);
     case 4: return GColorFromRGB(1, 1, 1);
     case 5: return GColorFromRGB(236, 32, 42);
-    case 6: return GColorFromRGB(43, 115, 162);
+    case 6: return GColorFromRGB(22, 99, 141);
     case 7: return GColorFromRGB(0, 0, 0);
     case 8: return GColorFromRGB(42, 104, 142);
     case 9: return GColorFromRGB(100, 100, 100);
