@@ -24,12 +24,10 @@ static time_t s_temperature_updated_at = 0;
 static const uint32_t KEY_TEMPERATURE = 0;
 static const uint32_t KEY_AUTO_ROTATE = 2;
 static const uint32_t KEY_FIXED_IMAGE_INDEX = 3;
-static const uint32_t KEY_BG_COLOR = 4;
 static const uint32_t PERSIST_KEY_TEMPERATURE_TEXT = 1;
 static const uint32_t PERSIST_KEY_TEMPERATURE_UPDATED_AT = 5;
 static const uint32_t PERSIST_KEY_AUTO_ROTATE = 2;
 static const uint32_t PERSIST_KEY_FIXED_IMAGE_INDEX = 3;
-static const uint32_t PERSIST_KEY_BG_COLOR = 4;
 
 static Window *s_main_window;
 static Layer *s_canvas_layer;
@@ -38,20 +36,12 @@ static GBitmap *s_center_emblems[12];
 static size_t s_current_emblem_index = 0;
 static bool s_auto_rotate = true;
 static size_t s_fixed_emblem_index = 0;
-static int s_bg_color_index = 0;
 
 static void update_active_emblem_index(const struct tm *tick_time);
 static void update_emblem_layer_bitmap(void);
 static GColor color_bg(void);
 static GColor emblem_bg_color(size_t index);
-
-enum {
-  BG_COLOR_MATCH_IMAGE = 0,
-  BG_COLOR_FENRISIAN_GREY = 1,
-  BG_COLOR_RUSS_GREY = 2,
-  BG_COLOR_THE_FANG = 3,
-  BG_COLOR_WHITE = 4
-};
+static GColor color_text(void);
 
 static bool is_placeholder_temperature(const char *value) {
   return strcmp(value, "--°") == 0;
@@ -87,7 +77,6 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *temperature_t = dict_find(iterator, KEY_TEMPERATURE);
   Tuple *auto_rotate_t = dict_find(iterator, KEY_AUTO_ROTATE);
   Tuple *fixed_image_index_t = dict_find(iterator, KEY_FIXED_IMAGE_INDEX);
-  Tuple *bg_color_t = dict_find(iterator, KEY_BG_COLOR);
   if (temperature_t && temperature_t->type == TUPLE_CSTRING && strlen(temperature_t->value->cstring) > 0) {
     if (is_placeholder_temperature(temperature_t->value->cstring) && is_temperature_fresh()) {
       return;
@@ -120,18 +109,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     }
   }
 
-  if (bg_color_t) {
-    int32_t candidate_bg = bg_color_t->value->int32;
-    if (candidate_bg >= BG_COLOR_MATCH_IMAGE && candidate_bg <= BG_COLOR_WHITE) {
-      s_bg_color_index = (int)candidate_bg;
-      persist_write_int(PERSIST_KEY_BG_COLOR, s_bg_color_index);
-      if (s_main_window) {
-        window_set_background_color(s_main_window, color_bg());
-      }
-    }
-  }
-
-  if (auto_rotate_t || fixed_image_index_t || bg_color_t) {
+  if (auto_rotate_t || fixed_image_index_t) {
     time_t now = time(NULL);
     struct tm *tick_time = localtime(&now);
     update_active_emblem_index(tick_time);
@@ -144,22 +122,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 
 static GColor color_bg(void) {
 #ifdef PBL_COLOR
-  if (s_bg_color_index == BG_COLOR_MATCH_IMAGE) {
-    return emblem_bg_color(s_current_emblem_index);
-  }
-
-  switch (s_bg_color_index) {
-    case BG_COLOR_FENRISIAN_GREY:
-      return GColorFromHEX(0xCEDEE7);
-    case BG_COLOR_RUSS_GREY:
-      return GColorFromHEX(0x585673);
-    case BG_COLOR_THE_FANG:
-      return GColorFromHEX(0x2F4351);
-    case BG_COLOR_WHITE:
-      return GColorWhite;
-    default:
-      return emblem_bg_color(s_current_emblem_index);
-  }
+  return emblem_bg_color(s_current_emblem_index);
 #else
   return GColorWhite;
 #endif
@@ -167,26 +130,36 @@ static GColor color_bg(void) {
 
 static GColor emblem_bg_color(size_t index) {
   switch (index) {
-    case 0: return GColorFromRGB(100, 100, 100);
-    case 1: return GColorFromRGB(51, 52, 53);
+    case 0: return GColorFromRGB(0, 0, 0);
+    case 1: return GColorFromRGB(255, 255, 255);
     case 2: return GColorFromRGB(42, 104, 141);
-    case 3: return GColorFromRGB(41, 41, 41);
+    case 3: return GColorFromRGB(255, 255, 255);
     case 4: return GColorFromRGB(1, 1, 1);
     case 5: return GColorFromRGB(236, 32, 42);
-    case 6: return GColorFromRGB(22, 99, 141);
+    case 6: return GColorFromRGB(43, 115, 162);
     case 7: return GColorFromRGB(0, 0, 0);
     case 8: return GColorFromRGB(42, 104, 142);
-    case 9: return GColorFromRGB(100, 100, 100);
+    case 9: return GColorFromRGB(235, 187, 7);
     case 10: return GColorFromRGB(216, 28, 1);
-    case 11: return GColorFromRGB(10, 9, 12);
+    case 11: return GColorFromRGB(0, 0, 2);
   }
 
-  return GColorFromRGB(100, 100, 100);
+  return GColorFromRGB(0, 0, 0);
 }
 
 static GColor color_text(void) {
 #ifdef PBL_COLOR
-  return GColorFromHEX(0x585673);
+  switch (s_current_emblem_index) {
+    case 0:
+    case 4:
+    case 5:
+    case 7:
+    case 10:
+    case 11:
+      return GColorWhite;
+    default:
+      return GColorBlack;
+  }
 #else
   return GColorBlack;
 #endif
@@ -218,10 +191,12 @@ static GColor color_battery(int charge_percent) {
 }
 
 static void draw_battery_badge(GContext *ctx, const char *text, GRect rect, GColor fill_color) {
+  GColor text_color = color_text();
+
   graphics_context_set_fill_color(ctx, fill_color);
   graphics_fill_rect(ctx, rect, 6, GCornersAll);
 
-  graphics_context_set_text_color(ctx, GColorBlack);
+  graphics_context_set_text_color(ctx, text_color);
   graphics_draw_text(ctx,
                      text,
                      fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
@@ -407,12 +382,6 @@ static void init(void) {
     int persisted_index = persist_read_int(PERSIST_KEY_FIXED_IMAGE_INDEX);
     if (persisted_index >= 0 && persisted_index < (int)EMBLEM_COUNT) {
       s_fixed_emblem_index = (size_t)persisted_index;
-    }
-  }
-  if (persist_exists(PERSIST_KEY_BG_COLOR)) {
-    int persisted_bg = persist_read_int(PERSIST_KEY_BG_COLOR);
-    if (persisted_bg >= BG_COLOR_MATCH_IMAGE && persisted_bg <= BG_COLOR_WHITE) {
-      s_bg_color_index = persisted_bg;
     }
   }
 
