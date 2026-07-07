@@ -216,6 +216,9 @@ static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bo
   int32_t hour_angle;
   int i;
 
+  minute_angle = TRIG_MAX_ANGLE * tick_time->tm_min / 60;
+  hour_angle = TRIG_MAX_ANGLE * ((tick_time->tm_hour % 12) * 60 + tick_time->tm_min) / 720;
+
   graphics_context_set_stroke_color(ctx, GColorWhite);
   graphics_context_set_fill_color(ctx, GColorWhite);
   graphics_context_set_stroke_width(ctx, 5);
@@ -236,9 +239,6 @@ static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bo
     graphics_context_set_stroke_width(ctx, 5);
     graphics_draw_line(ctx, inner, outer);
   }
-
-  minute_angle = TRIG_MAX_ANGLE * tick_time->tm_min / 60;
-  hour_angle = TRIG_MAX_ANGLE * ((tick_time->tm_hour % 12) * 60 + tick_time->tm_min) / 720;
 
   {
     GPoint minute_end = GPoint(
@@ -277,6 +277,21 @@ static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bo
     graphics_draw_line(ctx, inner, outer);
   }
 
+  {
+    GPoint minute_end = GPoint(
+      center.x + (int16_t)((sin_lookup(minute_angle) * minute_length) / TRIG_MAX_RATIO),
+      center.y - (int16_t)((cos_lookup(minute_angle) * minute_length) / TRIG_MAX_RATIO)
+    );
+    GPoint hour_end = GPoint(
+      center.x + (int16_t)((sin_lookup(hour_angle) * hour_length) / TRIG_MAX_RATIO),
+      center.y - (int16_t)((cos_lookup(hour_angle) * hour_length) / TRIG_MAX_RATIO)
+    );
+    graphics_context_set_stroke_width(ctx, 5);
+    graphics_draw_line(ctx, center, hour_end);
+    graphics_context_set_stroke_width(ctx, 4);
+    graphics_draw_line(ctx, center, minute_end);
+    graphics_fill_circle(ctx, center, 4);
+  }
 }
 
 static GColor color_battery(int charge_percent) {
