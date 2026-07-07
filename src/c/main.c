@@ -24,10 +24,12 @@ static time_t s_temperature_updated_at = 0;
 static const uint32_t KEY_TEMPERATURE = 0;
 static const uint32_t KEY_AUTO_ROTATE = 2;
 static const uint32_t KEY_FIXED_IMAGE_INDEX = 3;
+static const uint32_t KEY_FACE_MODE = 5;
 static const uint32_t PERSIST_KEY_TEMPERATURE_TEXT = 1;
 static const uint32_t PERSIST_KEY_TEMPERATURE_UPDATED_AT = 5;
 static const uint32_t PERSIST_KEY_AUTO_ROTATE = 2;
 static const uint32_t PERSIST_KEY_FIXED_IMAGE_INDEX = 3;
+static const uint32_t PERSIST_KEY_FACE_MODE = 6;
 
 static Window *s_main_window;
 static Layer *s_canvas_layer;
@@ -36,12 +38,20 @@ static GBitmap *s_center_emblems[12];
 static size_t s_current_emblem_index = 0;
 static bool s_auto_rotate = true;
 static size_t s_fixed_emblem_index = 0;
+static int s_face_mode = 0;
 
 static void update_active_emblem_index(const struct tm *tick_time);
 static void update_emblem_layer_bitmap(void);
 static GColor color_bg(void);
 static GColor emblem_bg_color(size_t index);
 static GColor color_text(void);
+static void draw_digital_time(GContext *ctx, const struct tm *tick_time, GRect bounds);
+static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bounds);
+
+enum {
+  FACE_MODE_DIGITAL = 0,
+  FACE_MODE_ANALOG = 1
+};
 
 static bool is_placeholder_temperature(const char *value) {
   return strcmp(value, "--°") == 0;
@@ -77,6 +87,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   Tuple *temperature_t = dict_find(iterator, KEY_TEMPERATURE);
   Tuple *auto_rotate_t = dict_find(iterator, KEY_AUTO_ROTATE);
   Tuple *fixed_image_index_t = dict_find(iterator, KEY_FIXED_IMAGE_INDEX);
+  Tuple *face_mode_t = dict_find(iterator, KEY_FACE_MODE);
   if (temperature_t && temperature_t->type == TUPLE_CSTRING && strlen(temperature_t->value->cstring) > 0) {
     if (is_placeholder_temperature(temperature_t->value->cstring) && is_temperature_fresh()) {
       return;
@@ -109,7 +120,15 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     }
   }
 
-  if (auto_rotate_t || fixed_image_index_t) {
+  if (face_mode_t) {
+    int32_t candidate_face_mode = face_mode_t->value->int32;
+    if (candidate_face_mode == FACE_MODE_DIGITAL || candidate_face_mode == FACE_MODE_ANALOG) {
+      s_face_mode = (int)candidate_face_mode;
+      persist_write_int(PERSIST_KEY_FACE_MODE, s_face_mode);
+    }
+  }
+
+  if (auto_rotate_t || fixed_image_index_t || face_mode_t) {
     time_t now = time(NULL);
     struct tm *tick_time = localtime(&now);
     update_active_emblem_index(tick_time);
@@ -163,6 +182,71 @@ static GColor color_text(void) {
 #else
   return GColorBlack;
 #endif
+}
+
+static void draw_digital_time(GContext *ctx, const struct tm *tick_time, GRect bounds) {
+  char time_buffer[6];
+
+  (void)tick_time;
+
+  clock_copy_time_string(time_buffer, sizeof(time_buffer));
+  graphics_context_set_text_color(ctx, color_text());
+  graphics_draw_text(ctx,
+                     time_buffer,
+                     fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD),
+                     GRect(0, 18, bounds.size.w, 50),
+                     GTextOverflowModeTrailingEllipsis,
+                     GTextAlignmentCenter,
+                     NULL);
+}
+
+static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bounds) {
+  const int16_t diameter = 54;
+  const int16_t radius = diameter / 2;
+  const GRect clock_rect = GRect((bounds.size.w - diameter) / 2, 18, diameter, diameter);
+  const GPoint center = grect_center_point(&clock_rect);
+  const GColor face_color = color_text();
+  const int16_t minute_length = radius - 4;
+  const int16_t hour_length = radius - 12;
+  int32_t minute_angle;
+  int32_t hour_angle;
+  int i;
+
+  graphics_context_set_stroke_color(ctx, face_color);
+  graphics_context_set_fill_color(ctx, face_color);
+  graphics_draw_circle(ctx, center, radius);
+
+  for (i = 0; i < 12; i += 1) {
+    int32_t angle = TRIG_MAX_ANGLE * i / 12;
+    int32_t cosv = cos_lookup(angle);
+    int32_t sinv = sin_lookup(angle);
+    GPoint outer = GPoint(
+      center.x + (int16_t)((cosv * radius) / TRIG_MAX_RATIO),
+      center.y + (int16_t)((sinv * radius) / TRIG_MAX_RATIO)
+    );
+    GPoint inner = GPoint(
+      center.x + (int16_t)((cosv * (radius - 4)) / TRIG_MAX_RATIO),
+      center.y + (int16_t)((sinv * (radius - 4)) / TRIG_MAX_RATIO)
+    );
+    graphics_draw_line(ctx, inner, outer);
+  }
+
+  minute_angle = TRIG_MAX_ANGLE * tick_time->tm_min / 60;
+  hour_angle = TRIG_MAX_ANGLE * ((tick_time->tm_hour % 12) * 60 + tick_time->tm_min) / 720;
+
+  {
+    GPoint minute_end = GPoint(
+      center.x + (int16_t)((cos_lookup(minute_angle) * minute_length) / TRIG_MAX_RATIO),
+      center.y + (int16_t)((sin_lookup(minute_angle) * minute_length) / TRIG_MAX_RATIO)
+    );
+    GPoint hour_end = GPoint(
+      center.x + (int16_t)((cos_lookup(hour_angle) * hour_length) / TRIG_MAX_RATIO),
+      center.y + (int16_t)((sin_lookup(hour_angle) * hour_length) / TRIG_MAX_RATIO)
+    );
+    graphics_draw_line(ctx, center, minute_end);
+    graphics_draw_line(ctx, center, hour_end);
+    graphics_fill_circle(ctx, center, 2);
+  }
 }
 
 static GColor color_battery(int charge_percent) {
@@ -232,7 +316,6 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   time_t now = time(NULL);
   struct tm *tick_time = localtime(&now);
 
-  char time_buffer[6];
   char date_buffer[16];
   char battery_buffer[8];
   GRect battery_rect = GRect(8, 2, 50, 22);
@@ -240,7 +323,6 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
   GRect temperature_rect = GRect(bounds.size.w - 58, 2, 50, 22);
   GRect label_rect = GRect(0, 136, bounds.size.w, 26);
 
-  clock_copy_time_string(time_buffer, sizeof(time_buffer));
   strftime(date_buffer, sizeof(date_buffer), "%a %e", tick_time);
   snprintf(battery_buffer, sizeof(battery_buffer), "%d%%", battery_state.charge_percent);
 
@@ -272,14 +354,11 @@ static void canvas_update_proc(Layer *layer, GContext *ctx) {
                      GTextAlignmentRight,
                      NULL);
 
-  graphics_context_set_text_color(ctx, color_text());
-  graphics_draw_text(ctx,
-                     time_buffer,
-                     fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD),
-                     GRect(0, 18, bounds.size.w, 50),
-                     GTextOverflowModeTrailingEllipsis,
-                     GTextAlignmentCenter,
-                     NULL);
+  if (s_face_mode == FACE_MODE_ANALOG) {
+    draw_analog_time(ctx, tick_time, bounds);
+  } else {
+    draw_digital_time(ctx, tick_time, bounds);
+  }
 
   graphics_draw_text(ctx,
                      s_emblem_labels[s_current_emblem_index],
@@ -382,6 +461,12 @@ static void init(void) {
     int persisted_index = persist_read_int(PERSIST_KEY_FIXED_IMAGE_INDEX);
     if (persisted_index >= 0 && persisted_index < (int)EMBLEM_COUNT) {
       s_fixed_emblem_index = (size_t)persisted_index;
+    }
+  }
+  if (persist_exists(PERSIST_KEY_FACE_MODE)) {
+    int persisted_face_mode = persist_read_int(PERSIST_KEY_FACE_MODE);
+    if (persisted_face_mode == FACE_MODE_DIGITAL || persisted_face_mode == FACE_MODE_ANALOG) {
+      s_face_mode = persisted_face_mode;
     }
   }
 

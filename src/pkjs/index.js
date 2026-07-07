@@ -1,6 +1,7 @@
 var STORAGE_KEY_TEMPERATURE = 'lastTemperature';
 var STORAGE_KEY_AUTO_ROTATE = 'autoRotate';
 var STORAGE_KEY_FIXED_IMAGE_INDEX = 'fixedImageIndex';
+var STORAGE_KEY_FACE_MODE = 'faceMode';
 var PLACEHOLDER_TEMPERATURE = '--°';
 var EMBLEM_LABELS = [
   'Champions of Fenris',
@@ -31,6 +32,14 @@ function getAutoRotateSetting() {
 function getFixedImageIndexSetting() {
   var value = parseInt(localStorage.getItem(STORAGE_KEY_FIXED_IMAGE_INDEX) || '0', 10);
   if (isNaN(value) || value < 0 || value >= EMBLEM_LABELS.length) {
+    return 0;
+  }
+  return value;
+}
+
+function getFaceModeSetting() {
+  var value = parseInt(localStorage.getItem(STORAGE_KEY_FACE_MODE) || '0', 10);
+  if (isNaN(value) || (value !== 0 && value !== 1)) {
     return 0;
   }
   return value;
@@ -81,7 +90,8 @@ function sendSettings() {
   console.log('queue settings');
   queueAppMessage({
     2: getAutoRotateSetting() ? 1 : 0,
-    3: getFixedImageIndexSetting()
+    3: getFixedImageIndexSetting(),
+    5: getFaceModeSetting()
   });
 }
 
@@ -166,6 +176,7 @@ function ensureTemperatureRefreshLoop() {
 function buildConfigPage() {
   var autoRotateChecked = getAutoRotateSetting();
   var fixedIndex = getFixedImageIndexSetting();
+  var faceMode = getFaceModeSetting();
   var optionsHtml = EMBLEM_LABELS.map(function(label, index) {
     return '<label class="option">' +
       '<input type="radio" name="fixedIndex" value="' + index + '"' +
@@ -173,6 +184,10 @@ function buildConfigPage() {
       '<span>' + label + '</span>' +
       '</label>';
   }).join('');
+  var faceOptionsHtml = [
+    '<label class="option"><input type="radio" name="faceMode" value="0"' + (faceMode === 0 ? ' checked' : '') + '><span>DIGITAL</span></label>',
+    '<label class="option"><input type="radio" name="faceMode" value="1"' + (faceMode === 1 ? ' checked' : '') + '><span>ANALOG</span></label>'
+  ].join('');
 
   return '<!doctype html><html><head><meta charset="utf-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1">' +
@@ -188,6 +203,8 @@ function buildConfigPage() {
     '.hint{font-size:13px;opacity:.8;line-height:1.4;margin-top:8px;}' +
     '</style></head><body><h1>Logan Watchface</h1>' +
     '<div class="card">' +
+    '<h2>Face</h2>' +
+    faceOptionsHtml +
     '<h2>Rotation Mode</h2>' +
     '<label class="option"><input type="radio" name="mode" value="auto"' + (autoRotateChecked ? ' checked' : '') + '><span>Auto Rotate</span></label>' +
     '<label class="option"><input type="radio" name="mode" value="fixed"' + (!autoRotateChecked ? ' checked' : '') + '><span>Fixed Image</span></label>' +
@@ -200,9 +217,10 @@ function buildConfigPage() {
     '</div></div>' +
     '<script>' +
     'document.getElementById("save").addEventListener("click",function(){' +
+    'var faceMode=document.querySelector(\'input[name="faceMode"]:checked\').value;' +
     'var mode=document.querySelector(\'input[name="mode"]:checked\').value;' +
     'var fixed=document.querySelector(\'input[name="fixedIndex"]:checked\').value;' +
-    'var result={autoRotate:mode==="auto",fixedImageIndex:parseInt(fixed,10)};' +
+    'var result={faceMode:parseInt(faceMode,10),autoRotate:mode==="auto",fixedImageIndex:parseInt(fixed,10)};' +
     'document.location="pebblejs://close#" + encodeURIComponent(JSON.stringify(result));' +
     '});' +
     'document.getElementById("cancel").addEventListener("click",function(){document.location="pebblejs://close#";});' +
@@ -241,6 +259,7 @@ Pebble.addEventListener('webviewclosed', function(e) {
     return;
   }
 
+  localStorage.setItem(STORAGE_KEY_FACE_MODE, String(config.faceMode));
   localStorage.setItem(STORAGE_KEY_AUTO_ROTATE, config.autoRotate ? 'true' : 'false');
   localStorage.setItem(STORAGE_KEY_FIXED_IMAGE_INDEX, String(config.fixedImageIndex));
   sendSettings();
