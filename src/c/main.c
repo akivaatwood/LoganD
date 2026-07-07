@@ -209,7 +209,7 @@ static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bo
   const int16_t radius = diameter / 2;
   const GRect clock_rect = GRect((bounds.size.w - diameter) / 2, 34, diameter, diameter);
   const GPoint center = grect_center_point(&clock_rect);
-  const GColor face_color = color_text();
+  const GColor face_color = GColorBlack;
   const int16_t minute_length = radius - 6;
   const int16_t hour_length = (radius * 66) / 100;
   int32_t minute_angle;
