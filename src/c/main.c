@@ -201,13 +201,13 @@ static void draw_digital_time(GContext *ctx, const struct tm *tick_time, GRect b
 }
 
 static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bounds) {
-  const int16_t diameter = 54;
+  const int16_t diameter = (bounds.size.w - 12 < bounds.size.h - 70) ? (bounds.size.w - 12) : (bounds.size.h - 70);
   const int16_t radius = diameter / 2;
-  const GRect clock_rect = GRect((bounds.size.w - diameter) / 2, 18, diameter, diameter);
+  const GRect clock_rect = GRect((bounds.size.w - diameter) / 2, 30, diameter, diameter);
   const GPoint center = grect_center_point(&clock_rect);
   const GColor face_color = color_text();
-  const int16_t minute_length = radius - 4;
-  const int16_t hour_length = radius - 12;
+  const int16_t minute_length = radius - 6;
+  const int16_t hour_length = radius - 16;
   int32_t minute_angle;
   int32_t hour_angle;
   int i;
@@ -243,9 +243,11 @@ static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bo
       center.x + (int16_t)((cos_lookup(hour_angle) * hour_length) / TRIG_MAX_RATIO),
       center.y + (int16_t)((sin_lookup(hour_angle) * hour_length) / TRIG_MAX_RATIO)
     );
-    graphics_draw_line(ctx, center, minute_end);
+    graphics_context_set_stroke_width(ctx, 3);
     graphics_draw_line(ctx, center, hour_end);
-    graphics_fill_circle(ctx, center, 2);
+    graphics_context_set_stroke_width(ctx, 2);
+    graphics_draw_line(ctx, center, minute_end);
+    graphics_fill_circle(ctx, center, 3);
   }
 }
 
