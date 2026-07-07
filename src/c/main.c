@@ -237,8 +237,8 @@ static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bo
     graphics_draw_line(ctx, inner, outer);
   }
 
-  minute_angle = (TRIG_MAX_ANGLE * tick_time->tm_min / 60) + (TRIG_MAX_ANGLE / 2);
-  hour_angle = (TRIG_MAX_ANGLE * ((tick_time->tm_hour % 12) * 60 + tick_time->tm_min) / 720) + (TRIG_MAX_ANGLE / 2);
+  minute_angle = TRIG_MAX_ANGLE * tick_time->tm_min / 60;
+  hour_angle = TRIG_MAX_ANGLE * ((tick_time->tm_hour % 12) * 60 + tick_time->tm_min) / 720;
 
   {
     GPoint minute_end = GPoint(
