@@ -2,6 +2,7 @@ var STORAGE_KEY_TEMPERATURE = 'lastTemperature';
 var STORAGE_KEY_AUTO_ROTATE = 'autoRotate';
 var STORAGE_KEY_FIXED_IMAGE_INDEX = 'fixedImageIndex';
 var STORAGE_KEY_FACE_MODE = 'faceMode';
+var SETTINGS_VERSION = '2026-07-07';
 var PLACEHOLDER_TEMPERATURE = '--°';
 var EMBLEM_LABELS = [
   'Champions of Fenris',
@@ -195,6 +196,7 @@ function buildConfigPage() {
     '<style>' +
     'body{font-family:-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;background:#cedee7;color:#585673;margin:0;padding:16px;}' +
     'h1{font-size:22px;margin:0 0 12px;}h2{font-size:16px;margin:20px 0 8px;}' +
+    '.version{font-size:12px;opacity:.75;margin:-6px 0 14px;}' +
     '.card{background:rgba(255,255,255,.55);border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);}' +
     '.option{display:flex;align-items:flex-start;gap:10px;padding:8px 0;font-size:15px;}' +
     '.actions{display:flex;gap:10px;margin-top:18px;}' +
@@ -202,6 +204,7 @@ function buildConfigPage() {
     '.save{background:#585673;color:#fff;}.cancel{background:#fff;color:#585673;}' +
     '.hint{font-size:13px;opacity:.8;line-height:1.4;margin-top:8px;}' +
     '</style></head><body><h1>Logan Watchface</h1>' +
+    '<div class="version">Version ' + SETTINGS_VERSION + '</div>' +
     '<div class="card">' +
     '<h2>Face</h2>' +
     faceOptionsHtml +
