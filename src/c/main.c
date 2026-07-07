@@ -212,7 +212,6 @@ static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bo
   const GColor face_color = color_text();
   const int16_t minute_length = radius - 6;
   const int16_t hour_length = (radius * 66) / 100;
-  const int32_t angle_offset = TRIG_MAX_ANGLE * 3 / 4;
   int32_t minute_angle;
   int32_t hour_angle;
   int i;
@@ -223,31 +222,31 @@ static void draw_analog_time(GContext *ctx, const struct tm *tick_time, GRect bo
   graphics_draw_circle(ctx, center, radius);
 
   for (i = 0; i < 12; i += 1) {
-    int32_t angle = (TRIG_MAX_ANGLE * i / 12) - angle_offset;
-    int32_t cosv = cos_lookup(angle);
+    int32_t angle = TRIG_MAX_ANGLE * i / 12;
     int32_t sinv = sin_lookup(angle);
+    int32_t cosv = cos_lookup(angle);
     GPoint outer = GPoint(
-      center.x + (int16_t)((cosv * radius) / TRIG_MAX_RATIO),
-      center.y + (int16_t)((sinv * radius) / TRIG_MAX_RATIO)
+      center.x + (int16_t)((sinv * radius) / TRIG_MAX_RATIO),
+      center.y - (int16_t)((cosv * radius) / TRIG_MAX_RATIO)
     );
     GPoint inner = GPoint(
-      center.x + (int16_t)((cosv * (radius - 9)) / TRIG_MAX_RATIO),
-      center.y + (int16_t)((sinv * (radius - 9)) / TRIG_MAX_RATIO)
+      center.x + (int16_t)((sinv * (radius - 9)) / TRIG_MAX_RATIO),
+      center.y - (int16_t)((cosv * (radius - 9)) / TRIG_MAX_RATIO)
     );
     graphics_draw_line(ctx, inner, outer);
   }
 
-  minute_angle = (TRIG_MAX_ANGLE * tick_time->tm_min / 60) - angle_offset;
-  hour_angle = (TRIG_MAX_ANGLE * ((tick_time->tm_hour % 12) * 60 + tick_time->tm_min) / 720) - angle_offset;
+  minute_angle = TRIG_MAX_ANGLE * tick_time->tm_min / 60;
+  hour_angle = TRIG_MAX_ANGLE * ((tick_time->tm_hour % 12) * 60 + tick_time->tm_min) / 720;
 
   {
     GPoint minute_end = GPoint(
-      center.x + (int16_t)((cos_lookup(minute_angle) * minute_length) / TRIG_MAX_RATIO),
-      center.y + (int16_t)((sin_lookup(minute_angle) * minute_length) / TRIG_MAX_RATIO)
+      center.x + (int16_t)((sin_lookup(minute_angle) * minute_length) / TRIG_MAX_RATIO),
+      center.y - (int16_t)((cos_lookup(minute_angle) * minute_length) / TRIG_MAX_RATIO)
     );
     GPoint hour_end = GPoint(
-      center.x + (int16_t)((cos_lookup(hour_angle) * hour_length) / TRIG_MAX_RATIO),
-      center.y + (int16_t)((sin_lookup(hour_angle) * hour_length) / TRIG_MAX_RATIO)
+      center.x + (int16_t)((sin_lookup(hour_angle) * hour_length) / TRIG_MAX_RATIO),
+      center.y - (int16_t)((cos_lookup(hour_angle) * hour_length) / TRIG_MAX_RATIO)
     );
     graphics_context_set_stroke_width(ctx, 5);
     graphics_draw_line(ctx, center, hour_end);
