@@ -50,6 +50,31 @@ function isWeatherRequest(payload) {
   return payload && (payload[1] === 1 || payload.WEATHER_REQUEST === 1 || payload.REQUEST_WEATHER === 1);
 }
 
+function syncWatchSettings(payload) {
+  var updated = false;
+
+  if (!payload) {
+    return false;
+  }
+
+  if (typeof payload[2] !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_AUTO_ROTATE, payload[2] ? 'true' : 'false');
+    updated = true;
+  }
+
+  if (typeof payload[3] !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_FIXED_IMAGE_INDEX, String(payload[3]));
+    updated = true;
+  }
+
+  if (typeof payload[5] !== 'undefined') {
+    localStorage.setItem(STORAGE_KEY_FACE_MODE, String(payload[5]));
+    updated = true;
+  }
+
+  return updated;
+}
+
 function flushPendingAppMessage() {
   var payload;
 
@@ -242,6 +267,7 @@ Pebble.addEventListener('appmessage', function(e) {
   if (isWeatherRequest(e.payload)) {
     requestTemperature();
   }
+  syncWatchSettings(e.payload);
 });
 
 Pebble.addEventListener('showConfiguration', function() {

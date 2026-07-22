@@ -32,16 +32,32 @@ static const uint32_t PERSIST_KEY_FIXED_IMAGE_INDEX = 3;
 static const uint32_t PERSIST_KEY_FACE_MODE = 6;
 
 static Window *s_main_window;
+static Window *s_settings_window;
 static Layer *s_canvas_layer;
 static BitmapLayer *s_emblem_layer;
+static SimpleMenuLayer *s_settings_menu_layer;
 static GBitmap *s_center_emblems[12];
 static size_t s_current_emblem_index = 0;
 static bool s_auto_rotate = true;
 static size_t s_fixed_emblem_index = 0;
 static int s_face_mode = 0;
+static SimpleMenuSection s_settings_sections[1];
+static SimpleMenuItem s_settings_items[3];
+static char s_face_mode_subtitle[16];
+static char s_rotation_subtitle[16];
+static char s_fixed_image_subtitle[32];
 
 static void update_active_emblem_index(const struct tm *tick_time);
 static void update_emblem_layer_bitmap(void);
+static void update_settings_menu_items(void);
+static void sync_settings_to_phone(void);
+static void open_settings_window(void);
+static void settings_menu_item_selected(int index, void *context);
+static void settings_window_load(Window *window);
+static void settings_window_unload(Window *window);
+static void main_click_config_provider(void *context);
+static void main_select_long_click_handler(ClickRecognizerRef recognizer, void *context);
+static void main_select_long_click_release_handler(ClickRecognizerRef recognizer, void *context);
 static GColor color_bg(void);
 static GColor emblem_bg_color(size_t index);
 static GColor color_text(void);
@@ -83,6 +99,137 @@ static void request_temperature_update(void) {
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
   dict_write_end(iter);
   app_message_outbox_send();
+}
+
+static void sync_settings_to_phone(void) {
+  DictionaryIterator *iter;
+
+  if (app_message_outbox_begin(&iter) != APP_MSG_OK || !iter) {
+    return;
+  }
+
+  dict_write_uint8(iter, KEY_AUTO_ROTATE, s_auto_rotate ? 1 : 0);
+  dict_write_uint8(iter, KEY_FIXED_IMAGE_INDEX, (uint8_t)s_fixed_emblem_index);
+  dict_write_uint8(iter, KEY_FACE_MODE, (uint8_t)s_face_mode);
+  dict_write_end(iter);
+  app_message_outbox_send();
+}
+
+static void update_settings_menu_items(void) {
+  snprintf(s_face_mode_subtitle, sizeof(s_face_mode_subtitle), "%s",
+           s_face_mode == FACE_MODE_ANALOG ? "ANALOG" : "DIGITAL");
+  snprintf(s_rotation_subtitle, sizeof(s_rotation_subtitle), "%s",
+           s_auto_rotate ? "AUTO" : "FIXED");
+  snprintf(s_fixed_image_subtitle, sizeof(s_fixed_image_subtitle), "%s",
+           s_emblem_labels[s_fixed_emblem_index]);
+
+  s_settings_items[0] = (SimpleMenuItem) {
+    .title = "Face",
+    .subtitle = s_face_mode_subtitle,
+    .icon = NULL,
+    .callback = settings_menu_item_selected,
+  };
+  s_settings_items[1] = (SimpleMenuItem) {
+    .title = "Rotation",
+    .subtitle = s_rotation_subtitle,
+    .icon = NULL,
+    .callback = settings_menu_item_selected,
+  };
+  s_settings_items[2] = (SimpleMenuItem) {
+    .title = "Fixed Image",
+    .subtitle = s_fixed_image_subtitle,
+    .icon = NULL,
+    .callback = settings_menu_item_selected,
+  };
+
+  s_settings_sections[0] = (SimpleMenuSection) {
+    .title = "On-Watch Settings",
+    .items = s_settings_items,
+    .num_items = 3,
+  };
+}
+
+static void refresh_settings_ui(void) {
+  time_t now = time(NULL);
+  struct tm *tick_time = localtime(&now);
+
+  update_active_emblem_index(tick_time);
+  update_emblem_layer_bitmap();
+  if (s_main_window) {
+    window_set_background_color(s_main_window, color_bg());
+  }
+  if (s_canvas_layer) {
+    layer_mark_dirty(s_canvas_layer);
+  }
+  if (s_settings_menu_layer) {
+    update_settings_menu_items();
+    menu_layer_reload_data(simple_menu_layer_get_menu_layer(s_settings_menu_layer));
+  }
+}
+
+static void open_settings_window(void) {
+  if (s_settings_window) {
+    window_stack_push(s_settings_window, true);
+  }
+}
+
+static void settings_menu_item_selected(int index, void *context) {
+  (void)context;
+
+  switch (index) {
+    case 0:
+      s_face_mode = (s_face_mode == FACE_MODE_ANALOG) ? FACE_MODE_DIGITAL : FACE_MODE_ANALOG;
+      persist_write_int(PERSIST_KEY_FACE_MODE, s_face_mode);
+      set_emblem_layer_visibility(s_face_mode == FACE_MODE_ANALOG);
+      break;
+    case 1:
+      s_auto_rotate = !s_auto_rotate;
+      persist_write_bool(PERSIST_KEY_AUTO_ROTATE, s_auto_rotate);
+      break;
+    case 2:
+      s_fixed_emblem_index = (s_fixed_emblem_index + 1) % EMBLEM_COUNT;
+      persist_write_int(PERSIST_KEY_FIXED_IMAGE_INDEX, (int32_t)s_fixed_emblem_index);
+      break;
+  }
+
+  refresh_settings_ui();
+  sync_settings_to_phone();
+}
+
+static void settings_window_load(Window *window) {
+  Layer *window_layer = window_get_root_layer(window);
+  GRect bounds = layer_get_bounds(window_layer);
+
+  window_set_background_color(window, GColorWhite);
+  update_settings_menu_items();
+  s_settings_menu_layer = simple_menu_layer_create(bounds, window, s_settings_sections, 1, NULL);
+  layer_add_child(window_layer, simple_menu_layer_get_layer(s_settings_menu_layer));
+}
+
+static void settings_window_unload(Window *window) {
+  (void)window;
+
+  if (s_settings_menu_layer) {
+    simple_menu_layer_destroy(s_settings_menu_layer);
+    s_settings_menu_layer = NULL;
+  }
+}
+
+static void main_select_long_click_handler(ClickRecognizerRef recognizer, void *context) {
+  (void)recognizer;
+  (void)context;
+}
+
+static void main_select_long_click_release_handler(ClickRecognizerRef recognizer, void *context) {
+  (void)recognizer;
+  (void)context;
+  open_settings_window();
+}
+
+static void main_click_config_provider(void *context) {
+  (void)context;
+
+  window_long_click_subscribe(BUTTON_ID_SELECT, 500, main_select_long_click_handler, main_select_long_click_release_handler);
 }
 
 static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
@@ -132,13 +279,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   }
 
   if (auto_rotate_t || fixed_image_index_t || face_mode_t) {
-    time_t now = time(NULL);
-    struct tm *tick_time = localtime(&now);
-    update_active_emblem_index(tick_time);
-    update_emblem_layer_bitmap();
-    if (s_canvas_layer) {
-      layer_mark_dirty(s_canvas_layer);
-    }
+    refresh_settings_ui();
   }
 }
 
@@ -548,7 +689,14 @@ static void init(void) {
     .load = main_window_load,
     .unload = main_window_unload,
   });
+  window_set_click_config_provider(s_main_window, main_click_config_provider);
   window_stack_push(s_main_window, true);
+
+  s_settings_window = window_create();
+  window_set_window_handlers(s_settings_window, (WindowHandlers) {
+    .load = settings_window_load,
+    .unload = settings_window_unload,
+  });
 
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
   request_temperature_update();
@@ -556,6 +704,7 @@ static void init(void) {
 
 static void deinit(void) {
   tick_timer_service_unsubscribe();
+  window_destroy(s_settings_window);
   window_destroy(s_main_window);
 }
 
